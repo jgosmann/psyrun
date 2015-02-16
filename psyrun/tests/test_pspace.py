@@ -75,3 +75,22 @@ class TestSum(object):
         space = (Param(a=[1]) + Param(b=[])).build().fillna(nan_placeholder)
         assert sorted(space['a']) == sorted([1])
         assert sorted(space['b']) == sorted([nan_placeholder])
+
+
+class TestDifference(object):
+    def test_difference(self):
+        space = (Param(a=[1, 2, 3]) - Param(a=[2])).build()
+        assert sorted(space['a']) == [1, 3]
+
+    def test_param_missing_in_subtrahend(self):
+        space = (Param(a=[1, 2, 2], b=[4, 5, 6]) - Param(a=[2])).build()
+        assert sorted(space['a']) == [1]
+        assert sorted(space['b']) == [4]
+
+    def test_param_missign_in_minuend(self):
+        with pytest.raises(AmbiguousOperationError):
+            _ = Param(a=[1, 2, 3]) - Param(a=[2], b=[3])
+
+    def test_empty_subtrahend(self):
+        space = (Param(a=[1, 2, 3]) - Param()).build()
+        assert sorted(space['a']) == [1, 2, 3]

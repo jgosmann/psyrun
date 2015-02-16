@@ -22,6 +22,9 @@ class _PSpaceObj(object):
     def __mul__(self, other):
         return Product(self, other)
 
+    def __sub__(self, other):
+        return Difference(self, other)
+
 
 class Param(_PSpaceObj):
     def __init__(self, **params):
@@ -31,6 +34,22 @@ class Param(_PSpaceObj):
     def iterate(self):
         for _, row in self._params.iterrows():
             yield row
+
+
+class Difference(_PSpaceObj):
+    def __init__(self, left, right):
+        super(Difference, self).__init__(left.keys())
+        for k in right.keys():
+            if k not in self._keys:
+                raise AmbiguousOperationError(
+                    'Key `{0}` not existent in minuend.'.format(k))
+        self.left = left
+        self.right = right
+
+    def iterate(self):
+        exclude = self.right.build()
+        return (item for item in self.left.iterate()
+                if not (exclude == item[exclude.columns]).all(1).any())
 
 
 class Product(_PSpaceObj):
