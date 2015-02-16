@@ -35,6 +35,9 @@ class TestParam(object):
     def test_knows_about_its_keys(self):
         assert sorted(Param(a=[0], b=[1]).keys()) == ['a', 'b']
 
+    def test_length(self):
+        assert len(Param(a=[1, 2, 3], b=3)) == 3
+
 
 class TestProduct(object):
     def test_product(self):
@@ -58,6 +61,13 @@ class TestProduct(object):
         space = (Param(a=[1, 2, 3]) * Param(b=[])).build()
         assert space.empty
 
+    def test_length(self):
+        assert len(Param(a=[1, 2, 3]) * Param(b=[1, 2])) == 6
+        assert len(Param(a=[1, 2]) * Param()) == 2
+        assert len(Param() * Param(a=[1, 2])) == 2
+        assert len(Param(a=[1, 2]) * Param(b=[])) == 0
+        assert len(Param(a=[]) * Param(b=[1, 2])) == 0
+
 
 class TestSum(object):
     def test_sum(self):
@@ -80,6 +90,9 @@ class TestSum(object):
         assert sorted(space['a']) == sorted([1])
         assert sorted(space['b']) == sorted([nan_placeholder])
 
+    def test_legth(self):
+        assert len(Param(a=[1]) + Param(a=[2, 3])) == 3
+
 
 class TestDifference(object):
     def test_difference(self):
@@ -98,3 +111,6 @@ class TestDifference(object):
     def test_empty_subtrahend(self):
         space = (Param(a=[1, 2, 3]) - Param()).build()
         assert sorted(space['a']) == [1, 2, 3]
+
+    def test_length(self):
+        assert len(Param(a=[1, 2, 2], b=[4, 5, 6]) - Param(a=[2])) == 1

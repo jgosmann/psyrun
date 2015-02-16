@@ -35,6 +35,9 @@ class Param(_PSpaceObj):
         for _, row in self._params.iterrows():
             yield row
 
+    def __len__(self):
+        return len(self._params)
+
 
 class Difference(_PSpaceObj):
     def __init__(self, left, right):
@@ -50,6 +53,11 @@ class Difference(_PSpaceObj):
         exclude = self.right.build()
         return (item for item in self.left.iterate()
                 if not (exclude == item[exclude.columns]).all(1).any())
+
+    def __len__(self):
+        exclude = self.right.build()
+        return sum(1 for item in self.left.iterate()
+                   if not (exclude == item[exclude.columns]).all(1).any())
 
 
 class Product(_PSpaceObj):
@@ -71,6 +79,14 @@ class Product(_PSpaceObj):
             return (pd.concat(item) for item in itertools.product(
                 self.left.iterate(), self.right.iterate()))
 
+    def __len__(self):
+        if len(self.left.keys()) == 0:
+            return len(self.right)
+        elif len(self.right.keys()) == 0:
+            return len(self.left)
+        else:
+            return len(self.left) * len(self.right)
+
 
 class Sum(_PSpaceObj):
     def __init__(self, left, right):
@@ -81,6 +97,9 @@ class Sum(_PSpaceObj):
     def iterate(self):
         return (pd.Series(item, index=self.keys()) for item in itertools.chain(
             self.left.iterate(), self.right.iterate()))
+
+    def __len__(self):
+        return len(self.left) + len(self.right)
 
 
 class AmbiguousOperationError(RuntimeError):
