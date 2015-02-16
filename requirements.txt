@@ -1,5 +1,8 @@
+cython
 joblib
 numpy
+numexpr
 pandas
 pytest
 pytest-cov
+tables
