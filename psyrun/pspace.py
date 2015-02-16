@@ -48,16 +48,17 @@ class Difference(_PSpaceObj):
                     'Key `{0}` not existent in minuend.'.format(k))
         self.left = left
         self.right = right
+        self._cached = None
 
     def iterate(self):
-        exclude = self.right.build()
-        return (item for item in self.left.iterate()
+        if self._cached is None:
+            exclude = self.right.build()
+            self._cached = (item for item in self.left.iterate()
                 if not (exclude == item[exclude.columns]).all(1).any())
+        return self._cached
 
     def __len__(self):
-        exclude = self.right.build()
-        return sum(1 for item in self.left.iterate()
-                   if not (exclude == item[exclude.columns]).all(1).any())
+        return sum(1 for item in self.iterate())
 
 
 class Product(_PSpaceObj):
