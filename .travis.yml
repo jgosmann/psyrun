@@ -10,3 +10,9 @@ install:
   - pip install coveralls
 script: py.test --cov psyrun
 after_success: coveralls
+cache:
+  directories:
+  - $HOME/virtualenv/python2.6
+  - $HOME/virtualenv/python2.7
+  - $HOME/virtualenv/python3.3
+  - $HOME/virtualenv/python3.4
