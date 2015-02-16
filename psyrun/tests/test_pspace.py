@@ -46,8 +46,12 @@ class TestProduct(object):
         with pytest.raises(AmbiguousOperationError):
             _ = Param(a=[1, 2]) * Param(a=[2, 3], b=[4, 5])
 
-    def test_product_with_empty(self):
+    def test_product_with_empty_right(self):
         space = (Param(a=[1, 2, 3]) * Param()).build()
+        assert sorted(space['a']) == [1, 2, 3]
+
+    def test_product_with_empty_left(self):
+        space = (Param() * Param(a=[1, 2, 3])).build()
         assert sorted(space['a']) == [1, 2, 3]
 
     def test_product_with_zero_elements(self):
