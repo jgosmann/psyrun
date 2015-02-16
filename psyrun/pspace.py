@@ -58,7 +58,7 @@ class Product(_PSpaceObj):
         if len(shared_keys) > 0:
             raise AmbiguousOperationError(
                 'Duplicate param keys: {0}'.format(shared_keys))
-        super(Product, self).__init__(left.keys() + right.keys())
+        super(Product, self).__init__(list(left.keys()) + list(right.keys()))
         self.left = left
         self.right = right
 
@@ -74,7 +74,7 @@ class Product(_PSpaceObj):
 
 class Sum(_PSpaceObj):
     def __init__(self, left, right):
-        super(Sum, self).__init__(set(left.keys() + right.keys()))
+        super(Sum, self).__init__(set(left.keys()).union(set(right.keys())))
         self.left = left
         self.right = right
 
