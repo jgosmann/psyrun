@@ -8,25 +8,27 @@ from psyrun.core import load_results
 
 class SingleItemFanOut(object):
     def __init__(self, workdir):
+        self.workdir = workdir
         self.indir = os.path.join(workdir, 'in')
         self.outdir = os.path.join(workdir, 'out')
-        self.queue = []
 
         if not os.path.exists(self.indir):
             os.makedirs(self.indir)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
+    def _iter_filenames(self, pspace):
+        return ('{0}.h5'.format(i) for i in range(len(pspace)))
+
     def split(self, pspace):
-        for i, row in enumerate(pspace.iterate()):
-            filename = '{0}.h5'.format(i)
+        file_row_mapping = zip(self._iter_filenames(pspace), pspace.iterate())
+        for filename, row in file_row_mapping:
             pd.DataFrame([row]).to_hdf(
                 os.path.join(self.indir, filename), 'pspace')
-            self.queue.append(filename)
 
-    def iter_in_out_files(self):
+    def iter_in_out_files(self, pspace):
         return ((os.path.join(self.indir, f), os.path.join(self.outdir, f))
-                for f in self.queue)
+                for f in self._iter_filenames(pspace))
 
     def merge(self, merged_filename):
         for filename in os.listdir(self.outdir):
