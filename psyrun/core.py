@@ -62,6 +62,21 @@ def _get_results_dir(base):
     return path
 
 
+def get_n_nodes(psize, n_nodes=None, n_jobs=-1):
+    if n_jobs < 0:
+        try:
+            n_jobs = multiprocessing.cpu_count()
+        except NotImplementedError:
+            n_jobs = 1
+
+    if n_nodes is None:
+        n_nodes = psize // n_jobs
+        if psize % n_jobs > 0:
+            n_nodes += 1
+    return n_nodes
+
+
+# FIXME create distribute dir and handle existing
 def prepare_distribute(pspace, distribute_dir, n_nodes=None, n_jobs=-1):
     if n_jobs < 0:
         try:
@@ -72,9 +87,7 @@ def prepare_distribute(pspace, distribute_dir, n_nodes=None, n_jobs=-1):
     psize = len(pspace)
     if n_nodes is None:
         blocksize = n_jobs
-        n_nodes = psize // blocksize
-        if psize % blocksize > 0:
-            n_nodes += 1
+        n_nodes = get_n_nodes(psize, n_nodes, n_jobs)
     else:
         blocksize = (psize + psize % n_nodes) // n_nodes
 
