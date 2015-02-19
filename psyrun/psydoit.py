@@ -113,7 +113,7 @@ class FanOutSubtaskCreator(object):
         self.splitter = Splitter(os.path.join(workdir, task.name), task.pspace)
         self.task = task
 
-    def _submit(self, code, depends_on=None):
+    def _submit(self, code, name, depends_on=None):
         code = '''
 import sys
 sys.path = {path!r}
@@ -125,8 +125,11 @@ task = TaskDef({taskpath!r})
         '''.format(
             path=sys.path, taskdir=os.path.dirname(self.task.path),
             taskpath=self.task.path, code=code)
+        codefile = os.path.join(self.splitter.workdir, name + '.py')
+        with open(codefile, 'w') as f:
+            f.write(code)
         return {'id': self.task.scheduler.submit(
-            [self.task.python, '-c', code], depends_on=depends_on,
+            [self.task.python, codefile], depends_on=depends_on,
             scheduler_args=self.task.scheduler_args)}
 
     def create_split_subtask(self):
@@ -135,11 +138,12 @@ from psyrun.split import Splitter
 Splitter({workdir!r}, task.pspace).split()
         '''.format(workdir=self.splitter.workdir)
 
+        name = self.task.name + ':split'
         return dict_to_task({
-            'name': self.task.name + ':split',
+            'name': name,
             'file_dep': [self.task.path],
             'targets': [f for f, _ in self.splitter.iter_in_out_files()],
-            'actions': [(self._submit, [code])],
+            'actions': [(self._submit, [code, name])],
         })
 
     def create_process_subtasks(self):
@@ -154,13 +158,14 @@ Splitter({workdir!r}, task.pspace).split()
 task.worker.start(task.execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
 
+            name = '{0}:process:{1}'.format(self.task.name, i)
             t = dict_to_task({
-                'name': '{0}:process:{1}'.format(self.task.name, i),
+                'name': name,
                 'task_dep': [self.task.name + ':split'],
                 'file_dep': [infile],
                 'targets': [outfile],
                 'getargs': {'depends_on': (self.task.name + ':split', 'id')},
-                'actions': [(self._submit, [code])],
+                'actions': [(self._submit, [code, name])],
             })
             t.is_subtask = True
             group_task.task_dep.append(t.name)
@@ -174,15 +179,16 @@ from psyrun.split import Splitter
 Splitter.merge({workdir!r}, {filename!r})
         '''.format(workdir=self.splitter.workdir, filename=result_file)
 
+        name = self.task.name + ':merge'
         file_deps = [f for _, f in self.splitter.iter_in_out_files()]
         return dict_to_task({
-            'name': self.task.name + ':merge',
+            'name': name,
             'task_dep': ['{0}:process:{1}'.format(self.task.name, i)
                          for i in range(len(file_deps))],
             'file_dep': file_deps,
             'targets': [result_file],
             'getargs': {'depends_on': (self.task.name + ':process', 'id')},
-            'actions': [(self._submit, [code])],
+            'actions': [(self._submit, [code, name])],
             })
 
 
