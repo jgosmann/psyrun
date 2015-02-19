@@ -13,24 +13,6 @@ def _get_result(fn, row, *args, **kwargs):
     return result
 
 
-def dispatch_threaded(fn, pspace, args=None, kwargs=None, n_threads=-1):
-    if args is None:
-        args = []
-    if kwargs is None:
-        kwargs = {}
-    return pd.concat(Parallel(n_jobs=n_threads)(
-        delayed(_get_result)(fn, row, *args, **kwargs)
-        for _, row in pspace.iterrows()))
-
-
-def make_local_fn_launcher(fn, n_threads=-1):
-    def launcher(infile, outfile):
-        pspace = load_infile(infile)
-        df = dispatch_threaded(fn, pspace, n_threads=n_threads)
-        save_outfile(df, outfile)
-    return launcher
-
-
 def save_infile(df, infile):
     return df.to_hdf(infile, 'pspace')
 
