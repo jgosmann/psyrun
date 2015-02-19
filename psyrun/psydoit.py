@@ -125,5 +125,5 @@ FanOut({workdir!r}).merge({filename!r})
             })
 
 
-def psydoit(taskdir, workdir):
-    return DoitMain(PackageLoader(taskdir, workdir)).run(sys.argv[1:])
+def psydoit(taskdir, workdir, argv=sys.argv[1:]):
+    return DoitMain(PackageLoader(taskdir, workdir)).run(argv)
