@@ -31,6 +31,10 @@ def make_local_fn_launcher(fn, n_threads=-1):
     return launcher
 
 
+def save_infile(df, infile):
+    return df.to_hdf(infile, 'pspace')
+
+
 def load_infile(infile):
     return pd.read_hdf(infile, 'pspace')
 
