@@ -1,16 +1,4 @@
-import multiprocessing
-import os
-import os.path
-
-from joblib import Parallel, delayed
 import pandas as pd
-
-
-def _get_result(fn, row, *args, **kwargs):
-    result = fn(row, *args, **kwargs)
-    for k, v in row.iteritems():
-        result[k] = v
-    return result
 
 
 def save_infile(df, infile):

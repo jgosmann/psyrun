@@ -3,7 +3,7 @@ import os.path
 import pandas as pd
 import pytest
 
-from psyrun.core import load_results, save_infile
+from psyrun.io import load_results, save_infile
 from psyrun.pspace import Param
 from psyrun.worker import ParallelWorker, SerialWorker
 

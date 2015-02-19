@@ -3,7 +3,7 @@ import os.path
 
 import pandas as pd
 
-from psyrun.core import load_results
+from psyrun.io import load_results
 
 
 class Splitter(object):

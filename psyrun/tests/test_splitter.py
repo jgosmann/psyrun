@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.core import load_infile, load_results, save_outfile
+from psyrun.io import load_infile, load_results, save_outfile
 from psyrun.pspace import Param
 from psyrun.split import Splitter
 

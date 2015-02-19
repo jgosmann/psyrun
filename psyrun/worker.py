@@ -1,6 +1,13 @@
 import pandas as pd
 
-from psyrun.core import _get_result, load_infile, save_outfile
+from psyrun.io import load_infile, save_outfile
+
+
+def get_result(fn, row, *args, **kwargs):
+    result = fn(row, *args, **kwargs)
+    for k, v in row.iteritems():
+        result[k] = v
+    return result
 
 
 class Worker(object):
@@ -11,7 +18,7 @@ class Worker(object):
 class SerialWorker(Worker):
     def start(self, fn, infile, outfile):
         pspace = load_infile(infile)
-        df = pd.concat(_get_result(fn, row) for _, row in pspace.iterrows())
+        df = pd.concat(get_result(fn, row) for _, row in pspace.iterrows())
         save_outfile(df, outfile)
 
 
@@ -25,6 +32,6 @@ class ParallelWorker(Worker):
         pspace = load_infile(infile)
         parallel = joblib.Parallel(n_jobs=self.n_jobs, backend=self.backend)
         df = pd.concat(parallel(
-            joblib.delayed(_get_result)(fn, row)
+            joblib.delayed(get_result)(fn, row)
             for _, row in pspace.iterrows()))
         save_outfile(df, outfile)

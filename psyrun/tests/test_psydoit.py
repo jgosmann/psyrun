@@ -1,6 +1,6 @@
 import os.path
 
-from psyrun.core import load_results
+from psyrun.io import load_results
 from psyrun.psydoit import load_task, psydoit
 from psyrun.worker import Worker
 
