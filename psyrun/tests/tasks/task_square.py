@@ -6,5 +6,5 @@ from psyrun import Param
 pspace = Param(x=range(4))
 
 
-def execute(params):
-    return pd.DataFrame({'y': params['x'] ** 2})
+def execute(x):
+    return {'y': [x ** 2]}

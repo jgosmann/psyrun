@@ -8,8 +8,8 @@ from psyrun.pspace import Param
 from psyrun.worker import ParallelWorker, SerialWorker
 
 
-def square(pspace):
-    return pd.DataFrame({'x': pspace['a'] ** 2})
+def square(a):
+    return {'x': [a ** 2]}
 
 
 @pytest.mark.parametrize('worker', [SerialWorker(), ParallelWorker()])

@@ -7,5 +7,5 @@ pspace = Param()
 python = 'true'
 
 
-def execute(params):
+def execute():
     return pd.DataFrame()
