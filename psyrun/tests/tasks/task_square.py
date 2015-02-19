@@ -4,8 +4,6 @@ from psyrun import Param
 
 
 pspace = Param(x=range(4))
-n_nodes = 1
-n_jobs = 2
 
 
 def execute(params):

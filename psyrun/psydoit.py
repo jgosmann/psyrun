@@ -17,8 +17,7 @@ def load_task(taskdir, name):
     task = pkgutil.ImpImporter(taskdir).find_module(module_name).load_module(
         module_name)
     setattr(task, 'taskdir', taskdir)
-    if not hasattr(task, 'name'):
-        setattr(task, 'name', name)
+    setattr(task, 'name', name)
     if not hasattr(task, 'scheduler'):
         setattr(task, 'scheduler', ImmediateRun())
     if not hasattr(task, 'python'):
@@ -52,7 +51,7 @@ class PackageLoader(TaskLoader):
 
 class FanOutSubtaskCreator(object):
     def __init__(self, workdir, task):
-        self.fanout = SingleItemFanOut(workdir)
+        self.fanout = SingleItemFanOut(os.path.join(workdir, task.name))
         self.task = task
 
     def _submit(self, code, depends_on=None):
