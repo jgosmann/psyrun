@@ -1,0 +1,5 @@
+[run]
+source = psyrun
+omit =
+    */tests/test*
+    psyrun/tests/tasks/*
