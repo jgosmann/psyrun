@@ -1,4 +1,3 @@
-import pkgutil
 import os
 import os.path
 import re
@@ -13,36 +12,76 @@ from psyrun.scheduler import ImmediateRun
 from psyrun.worker import SerialWorker
 
 
-def load_task(taskdir, name):
-    module_name = 'task_' + name
-    task = pkgutil.ImpImporter(taskdir).find_module(module_name).load_module(
-        module_name)
-    setattr(task, 'taskdir', taskdir)
-    setattr(task, 'name', name)
-    if not hasattr(task, 'worker'):
-        setattr(task, 'worker', SerialWorker())
-    if not hasattr(task, 'scheduler'):
-        setattr(task, 'scheduler', ImmediateRun())
-    if not hasattr(task, 'scheduler_args'):
-        setattr(task, 'scheduler_args', None)
-    if not hasattr(task, 'python'):
-        setattr(task, 'python', 'python')
-    return task
+class TaskDef(object):
+    TASK_PATTERN = re.compile(r'^task_(.*)$')
+
+    def __init__(self, path, conf=None):
+        if conf is None:
+            conf = Config()
+
+        _set_public_attrs_from_dict(self, _load_pyfile(path))
+        self.path = path
+
+        if not hasattr(self, 'name'):
+            prefixed_name, _ = os.path.splitext(os.path.basename(path))
+            m = self.TASK_PATTERN.match(prefixed_name)
+            if m:
+                self.name = m.group(1)
+            else:
+                self.name = prefixed_name
+
+        conf.apply_as_default(self)
+
+
+def _load_pyfile(filename):
+    with open(filename, 'r') as f:
+        source = f.read()
+    code = compile(source, filename, 'exec')
+    loaded = {}
+    exec(code, loaded)
+    return loaded
+
+
+def _set_public_attrs_from_dict(obj, d):
+    for k, v in d.items():
+        if not k.startswith('_'):
+            setattr(obj, k, v)
+
+
+class Config(object):
+    __slots__ = ['workdir', 'worker', 'scheduler', 'scheduler_args', 'python']
+
+    def __init__(self):
+        self.workdir = 'psywork'
+        self.worker = SerialWorker()
+        self.scheduler = ImmediateRun()
+        self.scheduler_args = None
+        self.python = 'python'
+
+    @classmethod
+    def load_from_file(cls, filename='psyconf.py'):
+        conf = cls()
+        loaded_conf = _load_pyfile(filename)
+        _set_public_attrs_from_dict(conf, loaded_conf)
+        return conf
+
+    def apply_as_default(self, task):
+        for attr in self.__slots__:
+            if not hasattr(task, attr):
+                setattr(task, attr, getattr(self, attr))
 
 
 class PackageLoader(TaskLoader):
-    TASK_PATTERN = re.compile(r'^task_(.*)$')
-
     def __init__(self, taskdir, workdir):
         self.taskdir = taskdir
         self.workdir = workdir
 
     def load_tasks(self, cmd, opt_values, pos_args):
         task_list = []
-        for _, module_name, _ in pkgutil.iter_modules([self.taskdir]):
-            m = self.TASK_PATTERN.match(module_name)
-            if m:
-                task = load_task(self.taskdir, m.group(1))
+        for filename in os.listdir(self.taskdir):
+            root, ext = os.path.splitext(filename)
+            if TaskDef.TASK_PATTERN.match(root) and ext == '.py':
+                task = TaskDef(os.path.join(self.taskdir, filename))
                 task_list.extend(self.create_task(task))
         return task_list, {}
 
@@ -61,11 +100,10 @@ class FanOutSubtaskCreator(object):
 
     def _submit(self, code, depends_on=None):
         code = '''
-from psyrun.psydoit import load_task
-task = load_task({taskdir!r}, {name!r})
+from psyrun.psydoit import TaskDef
+task = TaskDef({path!r})
 {code}
-        '''.format(taskdir=self.task.taskdir, name=self.task.name, code=code)
-        # FIXME depends_on
+        '''.format(path=self.task.path, code=code)
         return {'id': self.task.scheduler.submit(
             [self.task.python, '-c', code], depends_on=depends_on,
             scheduler_args=self.task.scheduler_args)}
@@ -78,7 +116,7 @@ Splitter({workdir!r}, task.pspace).split()
 
         return dict_to_task({
             'name': self.task.name + ':split',
-            'file_dep': [self.task.__file__],
+            'file_dep': [self.task.path],
             'targets': [f for f, _ in self.splitter.iter_in_out_files()],
             'actions': [(self._submit, [code])],
         })
