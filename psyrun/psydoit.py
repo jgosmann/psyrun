@@ -39,7 +39,6 @@ def _load_pyfile(filename):
     source = '''
 import sys
 sys.path = {path!r}
-print sys.path
 sys.path.insert(0, {taskdir!r})
 '''.format(path=sys.path, taskdir=os.path.dirname(filename))
     with open(filename, 'r') as f:
@@ -118,7 +117,6 @@ class FanOutSubtaskCreator(object):
         code = '''
 import sys
 sys.path = {path!r}
-print sys.path
 sys.path.insert(0, {taskdir!r})
 
 from psyrun.psydoit import TaskDef
