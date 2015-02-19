@@ -18,7 +18,8 @@ class Worker(object):
 class SerialWorker(Worker):
     def start(self, fn, infile, outfile):
         pspace = load_infile(infile)
-        df = pd.concat(get_result(fn, row) for _, row in pspace.iterrows())
+        df = pd.concat(get_result(fn, pspace.iloc[i:i + 1])
+                       for i in range(len(pspace)))
         save_outfile(df, outfile)
 
 
@@ -32,6 +33,6 @@ class ParallelWorker(Worker):
         pspace = load_infile(infile)
         parallel = joblib.Parallel(n_jobs=self.n_jobs, backend=self.backend)
         df = pd.concat(parallel(
-            joblib.delayed(get_result)(fn, row)
-            for _, row in pspace.iterrows()))
+            joblib.delayed(get_result)(fn, pspace.iloc[i:i + 1])
+            for i in range(len(pspace))))
         save_outfile(df, outfile)

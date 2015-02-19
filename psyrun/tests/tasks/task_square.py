@@ -7,4 +7,4 @@ pspace = Param(x=range(4))
 
 
 def execute(params):
-    return pd.DataFrame({'y': [params['x'] ** 2]})
+    return pd.DataFrame({'y': params['x'] ** 2})

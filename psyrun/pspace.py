@@ -3,12 +3,22 @@ import itertools
 import pandas as pd
 
 
+def _merge(left, right):
+    assert len(left) == len(right)
+    left.reset_index(drop=True, inplace=True)
+    right.reset_index(drop=True, inplace=True)
+    return pd.merge(left, right, left_index=True, right_index=True)
+
+
 class _PSpaceObj(object):
     def __init__(self, keys):
         self._keys = keys
 
     def build(self):
-        return pd.DataFrame(self.iterate())
+        try:
+            return pd.concat(self.iterate())
+        except ValueError:
+            return pd.DataFrame()
 
     def iterate(self):
         raise NotImplementedError()
@@ -31,9 +41,12 @@ class Param(_PSpaceObj):
         super(Param, self).__init__(params.keys())
         self._params = pd.DataFrame(params)
 
+    def build(self):
+        return pd.DataFrame(self._params)
+
     def iterate(self):
-        for _, row in self._params.iterrows():
-            yield row
+        for i in range(len(self._params)):
+            yield self._params.iloc[i:i + 1]
 
     def __len__(self):
         return len(self._params)
@@ -51,10 +64,13 @@ class Difference(_PSpaceObj):
         self._cached = None
 
     def iterate(self):
+        if len(self.right) == 0:
+            return self.left.iterate()
         if self._cached is None:
-            exclude = self.right.build()
+            exclude = self.right.build().reset_index(drop=True)
             self._cached = (item for item in self.left.iterate()
-                if not (exclude == item[exclude.columns]).all(1).any())
+                if not (exclude == item[exclude.columns].reset_index(
+                    drop=True)).all(1).any())
         return self._cached
 
     def __len__(self):
@@ -77,7 +93,7 @@ class Product(_PSpaceObj):
         elif len(self.right.keys()) == 0:
             return self.left.iterate()
         else:
-            return (pd.concat(item) for item in itertools.product(
+            return (_merge(*item) for item in itertools.product(
                 self.left.iterate(), self.right.iterate()))
 
     def __len__(self):
@@ -96,8 +112,9 @@ class Sum(_PSpaceObj):
         self.right = right
 
     def iterate(self):
-        return (pd.Series(item, index=self.keys()) for item in itertools.chain(
-            self.left.iterate(), self.right.iterate()))
+        return (pd.DataFrame(item, columns=self.keys())
+                for item in itertools.chain(
+                    self.left.iterate(), self.right.iterate()))
 
     def __len__(self):
         return len(self.left) + len(self.right)

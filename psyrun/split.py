@@ -32,7 +32,8 @@ class Splitter(object):
         for i, filename in enumerate(self._iter_filenames()):
             split_size = max(
                 self.min_items, items_remaining // (self.max_splits - i))
-            pd.DataFrame(
+            items_remaining -= split_size
+            df = pd.concat(
                 row for row in self._iter_n(param_iter, split_size)).to_hdf(
                     os.path.join(self.indir, filename), 'pspace')
 

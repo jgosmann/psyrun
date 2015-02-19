@@ -1,5 +1,6 @@
 import itertools
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -37,6 +38,11 @@ class TestParam(object):
 
     def test_length(self):
         assert len(Param(a=[1, 2, 3], b=3)) == 3
+
+    def test_keeps_dtype(self):
+        space = Param(a=[1], b=[2.]).build()
+        assert np.issubdtype(space.dtypes['a'], int)
+        assert np.issubdtype(space.dtypes['b'], float)
 
 
 class TestProduct(object):
