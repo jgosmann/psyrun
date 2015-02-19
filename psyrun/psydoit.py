@@ -72,14 +72,14 @@ class Config(object):
 
 
 class PackageLoader(TaskLoader):
-    def __init__(self, taskdir, workdir):
+    def __init__(self, taskdir):
         self.taskdir = taskdir
-        self.workdir = workdir
         conffile = os.path.join(self.taskdir, 'psyconf.py')
         if os.path.exists(conffile):
             self.conf = Config.load_from_file(conffile)
         else:
             self.conf = Config()
+        self.workdir = self.conf.workdir
 
     def load_tasks(self, cmd, opt_values, pos_args):
         task_list = []
@@ -170,5 +170,5 @@ Splitter.merge({workdir!r}, {filename!r})
             })
 
 
-def psydoit(taskdir, workdir, argv=sys.argv[1:]):
-    return DoitMain(PackageLoader(taskdir, workdir)).run(argv)
+def psydoit(taskdir, argv=sys.argv[1:]):
+    return DoitMain(PackageLoader(taskdir)).run(argv)
