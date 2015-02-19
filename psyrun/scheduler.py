@@ -36,27 +36,35 @@ class Sqsub(Scheduler):
 
         def timelimit(self, limit):
             self.arg_list.extend(['-r', limit])
+            return self
 
         def output_file(self, filename):
             self.arg_list.extend(['-o', filename])
+            return self
 
         def n_cpus(self, n_cpus):
             self.arg_list.extend(['-n', n_cpus])
+            return self
 
         def n_nodes(self, n_nodes):
             self.arg_list.extend(['-N', n_nodes])
+            return self
 
         def memory(self, limit):
             self.arg_list.extend(['--mpp=' + limit])
+            return self
 
         def depends_on(self, jobids):
             self.arg_list.extend(['-w', ','.join(jobids)])
+            return self
 
         def idfile(self, idfile):
             self.arg_list.extend(['--idfile=' + idfile])
+            return self
 
         def name(self, name):
             self.arg_list.extend(['-j', name])
+            return self
 
 
     def __init__(self, workdir=None):
