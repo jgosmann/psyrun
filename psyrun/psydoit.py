@@ -23,6 +23,8 @@ def load_task(taskdir, name):
         setattr(task, 'worker', SerialWorker())
     if not hasattr(task, 'scheduler'):
         setattr(task, 'scheduler', ImmediateRun())
+    if not hasattr(task, 'scheduler_args'):
+        setattr(task, 'scheduler_args', None)
     if not hasattr(task, 'python'):
         setattr(task, 'python', 'python')
     return task
@@ -65,7 +67,8 @@ task = load_task({taskdir!r}, {name!r})
         '''.format(taskdir=self.task.taskdir, name=self.task.name, code=code)
         # FIXME depends_on
         return {'id': self.task.scheduler.submit(
-            [self.task.python, '-c', code])}
+            [self.task.python, '-c', code], depends_on=depends_on,
+            scheduler_args=self.task.scheduler_args)}
 
     def create_split_subtask(self):
         code = '''

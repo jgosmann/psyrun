@@ -14,6 +14,7 @@ def test_load_task_defaults():
     assert task.name == 'square'
     assert isinstance(task.worker, Worker)
     assert hasattr(task, 'scheduler')
+    assert hasattr(task, 'scheduler_args')
     assert hasattr(task, 'python')
 
 
