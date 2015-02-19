@@ -34,8 +34,12 @@ class TaskDef(object):
 
 
 def _load_pyfile(filename):
+    source = '''
+import sys
+sys.path.insert(0, {taskdir!r})
+'''.format(taskdir=os.path.dirname(filename))
     with open(filename, 'r') as f:
-        source = f.read()
+        source += f.read()
     code = compile(source, filename, 'exec')
     loaded = {}
     exec(code, loaded)
