@@ -8,7 +8,7 @@ from doit.task import dict_to_task
 from doit.cmd_base import TaskLoader
 from doit.doit_cmd import DoitMain
 
-from psyrun.fanout import SingleItemFanOut
+from psyrun.split import Splitter
 from psyrun.scheduler import ImmediateRun
 
 
@@ -51,7 +51,7 @@ class PackageLoader(TaskLoader):
 
 class FanOutSubtaskCreator(object):
     def __init__(self, workdir, task):
-        self.fanout = SingleItemFanOut(os.path.join(workdir, task.name))
+        self.splitter = Splitter(os.path.join(workdir, task.name), task.pspace)
         self.task = task
 
     def _submit(self, code, depends_on=None):
@@ -66,15 +66,14 @@ task = load_task({taskdir!r}, {name!r})
 
     def create_split_subtask(self):
         code = '''
-from psyrun.fanout import SingleItemFanOut as FanOut
-FanOut({workdir!r}).split(task.pspace)
-        '''.format(workdir=self.fanout.workdir)
+from psyrun.split import Splitter
+Splitter({workdir!r}, task.pspace).split()
+        '''.format(workdir=self.splitter.workdir)
 
         return dict_to_task({
             'name': self.task.name + ':split',
             'file_dep': [self.task.__file__],
-            'targets': [f for f, _ in self.fanout.iter_in_out_files(
-                self.task.pspace)],
+            'targets': [f for f, _ in self.splitter.iter_in_out_files()],
             'actions': [(self._submit, [code])],
         })
 
@@ -85,7 +84,7 @@ FanOut({workdir!r}).split(task.pspace)
         })
         group_task.has_subtask = True
         for i, (infile, outfile) in enumerate(
-                self.fanout.iter_in_out_files(self.task.pspace)):
+                self.splitter.iter_in_out_files()):
             code = '''
 from psyrun.worker import SerialWorker as Worker
 Worker().start(task.execute, {infile!r}, {outfile!r})
@@ -105,14 +104,13 @@ Worker().start(task.execute, {infile!r}, {outfile!r})
         yield group_task
 
     def create_merge_subtask(self):
-        result_file = os.path.join(self.fanout.workdir, 'result.h5')
+        result_file = os.path.join(self.splitter.workdir, 'result.h5')
         code = '''
-from psyrun.fanout import SingleItemFanOut as FanOut
-FanOut({workdir!r}).merge({filename!r})
-        '''.format(workdir=self.fanout.workdir, filename=result_file)
+from psyrun.split import Splitter
+Splitter.merge({workdir!r}, {filename!r})
+        '''.format(workdir=self.splitter.workdir, filename=result_file)
 
-        file_deps = [f for _, f in self.fanout.iter_in_out_files(
-            self.task.pspace)]
+        file_deps = [f for _, f in self.splitter.iter_in_out_files()]
         return dict_to_task({
             'name': self.task.name + ':merge',
             'task_dep': ['{0}:process:{1}'.format(self.task.name, i)
