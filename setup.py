@@ -9,4 +9,5 @@ setup(
     author_email='jan@hyper-world.de',
     packages=['psyrun'],
     provides=['psyrun'],
+    scripts=['scripts/psy-doit'],
 )
