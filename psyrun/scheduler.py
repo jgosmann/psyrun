@@ -55,7 +55,7 @@ class Sqsub(Scheduler):
             return self
 
         def depends_on(self, jobids):
-            self.arg_list.extend(['-w', ','.join(jobids)])
+            self.arg_list.extend(['-w', ','.join(str(x) for x in jobids)])
             return self
 
         def idfile(self, idfile):
