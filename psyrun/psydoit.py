@@ -10,6 +10,7 @@ from doit.doit_cmd import DoitMain
 
 from psyrun.split import Splitter
 from psyrun.scheduler import ImmediateRun
+from psyrun.worker import SerialWorker
 
 
 def load_task(taskdir, name):
@@ -18,6 +19,8 @@ def load_task(taskdir, name):
         module_name)
     setattr(task, 'taskdir', taskdir)
     setattr(task, 'name', name)
+    if not hasattr(task, 'worker'):
+        setattr(task, 'worker', SerialWorker())
     if not hasattr(task, 'scheduler'):
         setattr(task, 'scheduler', ImmediateRun())
     if not hasattr(task, 'python'):
@@ -86,8 +89,7 @@ Splitter({workdir!r}, task.pspace).split()
         for i, (infile, outfile) in enumerate(
                 self.splitter.iter_in_out_files()):
             code = '''
-from psyrun.worker import SerialWorker as Worker
-Worker().start(task.execute, {infile!r}, {outfile!r})
+task.worker.start(task.execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
 
             t = dict_to_task({

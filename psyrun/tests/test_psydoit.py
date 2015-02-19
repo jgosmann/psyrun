@@ -2,6 +2,7 @@ import os.path
 
 from psyrun.core import load_results
 from psyrun.psydoit import load_task, psydoit
+from psyrun.worker import Worker
 
 
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
@@ -11,6 +12,7 @@ def test_load_task_defaults():
     task = load_task(TASKDIR, 'square')
     assert task.taskdir == TASKDIR
     assert task.name == 'square'
+    assert isinstance(task.worker, Worker)
     assert hasattr(task, 'scheduler')
     assert hasattr(task, 'python')
 
