@@ -19,7 +19,8 @@ class TaskDef(object):
         if conf is None:
             conf = Config()
 
-        _set_public_attrs_from_dict(self, _load_pyfile(path))
+        _set_public_attrs_from_dict(
+            self, _load_pyfile(path), only_existing=False)
         self.path = path
 
         if not hasattr(self, 'name'):
@@ -46,9 +47,9 @@ sys.path.insert(0, {taskdir!r})
     return loaded
 
 
-def _set_public_attrs_from_dict(obj, d):
+def _set_public_attrs_from_dict(obj, d, only_existing=True):
     for k, v in d.items():
-        if not k.startswith('_'):
+        if not k.startswith('_') and (not only_existing or hasattr(obj, k)):
             setattr(obj, k, v)
 
 
@@ -60,7 +61,7 @@ class Config(object):
         self.worker = SerialWorker()
         self.scheduler = ImmediateRun()
         self.scheduler_args = None
-        self.python = 'python'
+        self.python = sys.executable
 
     @classmethod
     def load_from_file(cls, filename):
@@ -76,14 +77,17 @@ class Config(object):
 
 
 class PackageLoader(TaskLoader):
-    def __init__(self, taskdir):
+    def __init__(self, taskdir, workdir=None):
         self.taskdir = taskdir
         conffile = os.path.join(self.taskdir, 'psyconf.py')
         if os.path.exists(conffile):
             self.conf = Config.load_from_file(conffile)
         else:
             self.conf = Config()
-        self.workdir = self.conf.workdir
+        if workdir is None:
+            self.workdir = self.conf.workdir
+        else:
+            self.workdir = workdir
 
     def load_tasks(self, cmd, opt_values, pos_args):
         task_list = []
@@ -174,5 +178,5 @@ Splitter.merge({workdir!r}, {filename!r})
             })
 
 
-def psydoit(taskdir, argv=sys.argv[1:]):
-    return DoitMain(PackageLoader(taskdir)).run(argv)
+def psydoit(taskdir, workdir=None, argv=sys.argv[1:]):
+    return DoitMain(PackageLoader(taskdir, workdir)).run(argv)
