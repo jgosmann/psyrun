@@ -59,7 +59,7 @@ class Config(object):
         self.python = 'python'
 
     @classmethod
-    def load_from_file(cls, filename='psyconf.py'):
+    def load_from_file(cls, filename):
         conf = cls()
         loaded_conf = _load_pyfile(filename)
         _set_public_attrs_from_dict(conf, loaded_conf)
@@ -75,13 +75,18 @@ class PackageLoader(TaskLoader):
     def __init__(self, taskdir, workdir):
         self.taskdir = taskdir
         self.workdir = workdir
+        conffile = os.path.join(self.taskdir, 'psyconf.py')
+        if os.path.exists(conffile):
+            self.conf = Config.load_from_file(conffile)
+        else:
+            self.conf = Config()
 
     def load_tasks(self, cmd, opt_values, pos_args):
         task_list = []
         for filename in os.listdir(self.taskdir):
             root, ext = os.path.splitext(filename)
             if TaskDef.TASK_PATTERN.match(root) and ext == '.py':
-                task = TaskDef(os.path.join(self.taskdir, filename))
+                task = TaskDef(os.path.join(self.taskdir, filename), self.conf)
                 task_list.extend(self.create_task(task))
         return task_list, {}
 
