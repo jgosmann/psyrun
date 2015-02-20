@@ -1,7 +1,4 @@
-import itertools
-
 import numpy as np
-import pandas as pd
 import pytest
 
 from psyrun.pspace import AmbiguousOperationError, Param
@@ -9,7 +6,7 @@ from psyrun.pspace import AmbiguousOperationError, Param
 
 class TestParam(object):
     def test_empty(self):
-        assert Param().build().empty
+        assert Param().build() == {}
 
     def test_single(self):
         space = Param(a=[1, 2]).build()
@@ -24,9 +21,10 @@ class TestParam(object):
         with pytest.raises(ValueError):
             Param(a=[1, 2], b=[3])
 
-    def test_only_scalars_raises_error(self):
-        with pytest.raises(ValueError):
-            Param(a=1, b=2)
+    def test_only_scalars(self):
+        space = Param(a=1, b=2).build()
+        assert space['a'] == [1]
+        assert space['b'] == [2]
 
     def test_scalars_are_broadcasted(self):
         space = Param(a=[1, 2], b=3).build()
@@ -41,15 +39,15 @@ class TestParam(object):
 
     def test_keeps_dtype(self):
         space = Param(a=[1], b=[2.]).build()
-        assert np.issubdtype(space.dtypes['a'], int)
-        assert np.issubdtype(space.dtypes['b'], float)
+        assert np.issubdtype(type(space['a'][0]), int)
+        assert np.issubdtype(type(space['b'][0]), float)
 
 
 class TestProduct(object):
     def test_product(self):
         space = (Param(a=[1, 2, 3]) * Param(b=[4, 5])).build()
-        for a, b in itertools.product([1, 2, 3], [4, 5]):
-            assert (space == pd.Series({'a': a, 'b': b})).all(1).any()
+        assert space['a'] == [1, 1, 2, 2, 3, 3]
+        assert space['b'] == [4, 5, 4, 5, 4, 5]
 
     def test_overlapping_product(self):
         with pytest.raises(AmbiguousOperationError):
@@ -65,7 +63,8 @@ class TestProduct(object):
 
     def test_product_with_zero_elements(self):
         space = (Param(a=[1, 2, 3]) * Param(b=[])).build()
-        assert space.empty
+        assert space['a'] == []
+        assert space['b'] == []
 
     def test_length(self):
         assert len(Param(a=[1, 2, 3]) * Param(b=[1, 2])) == 6
@@ -81,20 +80,18 @@ class TestSum(object):
         assert sorted(space['a']) == [1, 2]
 
     def test_sum_distinct_params(self):
-        nan_placeholder = 42
-        space = (Param(a=[1]) + Param(b=[2])).build().fillna(nan_placeholder)
-        assert sorted(space['a']) == sorted([1, nan_placeholder])
-        assert sorted(space['b']) == sorted([2, nan_placeholder])
+        space = (Param(a=[1]) + Param(b=[2])).build()
+        assert space['a'] == [1, None]
+        assert space['b'] == [None, 2]
 
     def test_sum_with_empty(self):
         space = (Param(a=[1]) + Param()).build()
         assert sorted(space['a']) == [1]
 
     def test_sum_with_zero_elements(self):
-        nan_placeholder = 42
-        space = (Param(a=[1]) + Param(b=[])).build().fillna(nan_placeholder)
-        assert sorted(space['a']) == sorted([1])
-        assert sorted(space['b']) == sorted([nan_placeholder])
+        space = (Param(a=[1]) + Param(b=[])).build()
+        assert space['a'] == [1]
+        assert space['b'] == [None]
 
     def test_legth(self):
         assert len(Param(a=[1]) + Param(a=[2, 3])) == 3

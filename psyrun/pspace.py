@@ -1,30 +1,24 @@
 import itertools
 
-import pandas as pd
-
-
-def _merge(left, right):
-    assert len(left) == len(right)
-    left.reset_index(drop=True, inplace=True)
-    right.reset_index(drop=True, inplace=True)
-    return pd.merge(left, right, left_index=True, right_index=True)
-
 
 class _PSpaceObj(object):
     def __init__(self, keys):
         self._keys = keys
 
     def build(self):
-        try:
-            return pd.concat(self.iterate())
-        except ValueError:
-            return pd.DataFrame()
+        return self._concat(*self.iterate())
+
+    def _concat(self, *args):
+        return {k: [a[k] for a in args] for k in self.keys()}
 
     def iterate(self):
         raise NotImplementedError()
 
     def keys(self):
         return self._keys
+
+    def __len__(self):
+        raise NotImplementedError()
 
     def __add__(self, other):
         return Sum(self, other)
@@ -39,17 +33,35 @@ class _PSpaceObj(object):
 class Param(_PSpaceObj):
     def __init__(self, **params):
         super(Param, self).__init__(params.keys())
-        self._params = pd.DataFrame(params)
+        self._params = params
 
-    def build(self):
-        return pd.DataFrame(self._params)
+        self._len = None
+        for v in self._params.values():
+            try:
+                l = len(v)
+            except TypeError:
+                pass
+            else:
+                if self._len is None:
+                    self._len = l
+                elif self._len != l:
+                    raise ValueError("Parameter lists differ in length.")
+        if self._len is None:
+            self._len = 1 if len(self._params) > 0 else 0
 
     def iterate(self):
-        for i in range(len(self._params)):
-            yield self._params.iloc[i:i + 1]
+        for i in range(len(self)):
+            yield {k: self.get_param(k, i) for k in self.keys()}
 
     def __len__(self):
-        return len(self._params)
+        return self._len
+
+    def get_param(self, key, i):
+        p = self._params[key]
+        try:
+            return p[i]
+        except TypeError:
+            return p
 
 
 class Difference(_PSpaceObj):
@@ -67,10 +79,10 @@ class Difference(_PSpaceObj):
         if len(self.right) == 0:
             return self.left.iterate()
         if self._cached is None:
-            exclude = self.right.build().reset_index(drop=True)
+            exclude = self.right.build()
             self._cached = (item for item in self.left.iterate()
-                if not (exclude == item[exclude.columns].reset_index(
-                    drop=True)).all(1).any())
+                            if not all(item[k] in exclude[k]
+                                       for k in exclude.keys()))
         return self._cached
 
     def __len__(self):
@@ -83,6 +95,7 @@ class Product(_PSpaceObj):
         if len(shared_keys) > 0:
             raise AmbiguousOperationError(
                 'Duplicate param keys: {0}'.format(shared_keys))
+
         super(Product, self).__init__(list(left.keys()) + list(right.keys()))
         self.left = left
         self.right = right
@@ -93,8 +106,15 @@ class Product(_PSpaceObj):
         elif len(self.right.keys()) == 0:
             return self.left.iterate()
         else:
-            return (_merge(*item) for item in itertools.product(
+            return (self._merge(*item) for item in itertools.product(
                 self.left.iterate(), self.right.iterate()))
+
+    @staticmethod
+    def _merge(left, right):
+        merged = {}
+        merged.update(left)
+        merged.update(right)
+        return merged
 
     def __len__(self):
         if len(self.left.keys()) == 0:
@@ -112,7 +132,7 @@ class Sum(_PSpaceObj):
         self.right = right
 
     def iterate(self):
-        return (pd.DataFrame(item, columns=self.keys())
+        return ({k: item.get(k, None) for k in self.keys()}
                 for item in itertools.chain(
                     self.left.iterate(), self.right.iterate()))
 

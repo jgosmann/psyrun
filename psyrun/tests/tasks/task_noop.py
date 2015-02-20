@@ -1,5 +1,3 @@
-import pandas as pd
-
 from psyrun import Param
 
 
@@ -8,4 +6,4 @@ python = 'true'
 
 
 def execute():
-    return pd.DataFrame()
+    return {}

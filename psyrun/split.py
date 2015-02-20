@@ -1,9 +1,7 @@
 import os
 import os.path
 
-import pandas as pd
-
-from psyrun.io import load_results
+from psyrun.io import append_to_results, save_infile, load_results
 
 
 class Splitter(object):
@@ -33,9 +31,15 @@ class Splitter(object):
             split_size = max(
                 self.min_items, items_remaining // (self.max_splits - i))
             items_remaining -= split_size
-            df = pd.concat(
-                row for row in self._iter_n(param_iter, split_size)).to_hdf(
-                    os.path.join(self.indir, filename), 'pspace')
+            block = self._concat(
+                [row for row in self._iter_n(param_iter, split_size)])
+            save_infile(block, os.path.join(self.indir, filename))
+
+    def _concat(self, args):
+        keys = set()
+        for a in args:
+            keys = keys.union(a.keys())
+        return {k: [a.get(k, None) for a in args] for k in keys}
 
     @classmethod
     def merge(cls, workdir, merged_filename):
@@ -44,8 +48,7 @@ class Splitter(object):
             if os.path.splitext(filename)[1] != '.h5':
                 continue
             infile = os.path.join(outdir, filename)
-            load_results(infile).to_hdf(
-                merged_filename, 'results', append=True)
+            append_to_results(load_results(infile), merged_filename)
 
     def iter_in_out_files(self):
         return ((os.path.join(self.indir, f), os.path.join(self.outdir, f))

@@ -31,7 +31,7 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            save_outfile(load_infile(infile), outfile)
+            save_outfile(load_infile(infile).build(), outfile)
 
         result_file = os.path.join(str(tmpdir), 'result.h5')
         Splitter.merge(str(tmpdir), result_file)

@@ -1,6 +1,5 @@
 import os.path
 
-import pandas as pd
 import pytest
 
 from psyrun.io import load_results, save_infile
@@ -9,7 +8,7 @@ from psyrun.worker import ParallelWorker, SerialWorker
 
 
 def square(a):
-    return {'x': [a ** 2]}
+    return {'x': a ** 2}
 
 
 @pytest.mark.parametrize('worker', [SerialWorker(), ParallelWorker()])
