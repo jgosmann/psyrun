@@ -114,6 +114,11 @@ class FanOutSubtaskCreator(object):
         self.task = task
 
     def _submit(self, code, name, depends_on=None):
+        if depends_on is not None:
+            try:
+                len(depends_on)
+            except:
+                depends_on = [depends_on]
         code = '''
 import sys
 sys.path = {path!r}
