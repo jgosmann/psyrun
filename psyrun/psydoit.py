@@ -147,7 +147,6 @@ Splitter({workdir!r}, task.pspace).split()
         return dict_to_task({
             'name': name,
             'file_dep': [self.task.path],
-            'targets': [f for f, _ in self.splitter.iter_in_out_files()],
             'actions': [(self._submit, [code, name])],
         })
 
@@ -167,8 +166,6 @@ task.worker.start(task.execute, {infile!r}, {outfile!r})
             t = dict_to_task({
                 'name': name,
                 'task_dep': [self.task.name + ':split'],
-                'file_dep': [infile],
-                'targets': [outfile],
                 'getargs': {'depends_on': (self.task.name + ':split', 'id')},
                 'actions': [(self._submit, [code, name])],
             })
@@ -190,8 +187,6 @@ Splitter.merge({workdir!r}, {filename!r})
             'name': name,
             'task_dep': ['{0}:process:{1}'.format(self.task.name, i)
                          for i in range(len(file_deps))],
-            'file_dep': file_deps,
-            'targets': [result_file],
             'getargs': {'depends_on': (self.task.name + ':process', 'id')},
             'actions': [(self._submit, [code, name])],
             })
