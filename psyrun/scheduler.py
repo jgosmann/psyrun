@@ -16,7 +16,9 @@ class Scheduler(object):
 
 
 class ImmediateRun(Scheduler):
-    def submit(self, args, depends_on=None, scheduler_args=None):
+    def submit(
+            self, args, depends_on=None, output_file=None,
+            scheduler_args=None):
         subprocess.call(args)
         return 0
 
@@ -75,11 +77,15 @@ class Sqsub(Scheduler):
         self.workdir = workdir
         self.idfile = os.path.join(workdir, 'idfile')
 
-    def submit(self, args, depends_on=None, scheduler_args=None):
+    def submit(
+            self, args, depends_on=None, output_file=None,
+            scheduler_args=None):
         """Returns job id."""
         scheduler_args = self.Args(scheduler_args).idfile(self.idfile)
         if depends_on is not None:
             scheduler_args.depends_on(depends_on)
+        if output_file is not None:
+            scheduler_args.output_file(output_file)
         subprocess.check_call(['sqsub'] + scheduler_args.arg_list + args)
         with open(self.idfile, 'r') as f:
             return int(f.read())
