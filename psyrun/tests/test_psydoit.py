@@ -1,4 +1,5 @@
 import os.path
+import shutil
 
 from psyrun.io import load_results
 from psyrun.psydoit import TaskDef, Config, psydoit
@@ -40,7 +41,14 @@ def test_load_config_from_file(tmpdir):
 
 
 def test_psydoit(tmpdir):
+    taskdir = os.path.join(str(tmpdir), 'tasks')
+    workdir = os.path.join(str(tmpdir), 'work')
     dbfile = os.path.join(str(tmpdir), 'doit.db')
-    psydoit(TASKDIR, str(tmpdir), ['--db-file', dbfile])
-    result = load_results(os.path.join(str(tmpdir), 'square', 'result.h5'))
+
+    shutil.copytree(TASKDIR, taskdir)
+    with open(os.path.join(taskdir, 'psyconf.py'), 'w') as f:
+        f.write('workdir = {0!r}'.format(workdir))
+
+    psydoit(taskdir, ['--db-file', dbfile])
+    result = load_results(os.path.join(workdir, 'square', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]

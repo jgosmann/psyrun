@@ -79,17 +79,13 @@ class Config(object):
 
 
 class PackageLoader(TaskLoader):
-    def __init__(self, taskdir, workdir=None):
+    def __init__(self, taskdir):
         self.taskdir = taskdir
         conffile = os.path.join(self.taskdir, 'psyconf.py')
         if os.path.exists(conffile):
             self.conf = Config.load_from_file(conffile)
         else:
             self.conf = Config()
-        if workdir is None:
-            self.workdir = self.conf.workdir
-        else:
-            self.workdir = workdir
 
     def load_tasks(self, cmd, opt_values, pos_args):
         task_list = []
@@ -101,7 +97,7 @@ class PackageLoader(TaskLoader):
         return task_list, {}
 
     def create_task(self, task):
-        creator = FanOutSubtaskCreator(self.workdir, task)
+        creator = FanOutSubtaskCreator(task)
         yield creator.create_split_subtask()
         for st in creator.create_process_subtasks():
             yield st
@@ -109,15 +105,16 @@ class PackageLoader(TaskLoader):
 
 
 class FanOutSubtaskCreator(object):
-    def __init__(self, workdir, task):
-        self.splitter = Splitter(os.path.join(workdir, task.name), task.pspace)
+    def __init__(self, task):
+        self.splitter = Splitter(
+            os.path.join(task.workdir, task.name), task.pspace)
         self.task = task
 
     def _submit(self, code, name, depends_on=None):
         if depends_on is not None:
             try:
                 len(depends_on)
-            except:
+            except TypeError:
                 depends_on = [depends_on]
         code = '''
 import sys
@@ -193,6 +190,6 @@ Splitter.merge({workdir!r}, {filename!r})
             })
 
 
-def psydoit(taskdir, workdir=None, argv=sys.argv[1:]):
+def psydoit(taskdir, argv=sys.argv[1:]):
     init_virtualenv()
-    return DoitMain(PackageLoader(taskdir, workdir)).run(argv)
+    return DoitMain(PackageLoader(taskdir)).run(argv)
