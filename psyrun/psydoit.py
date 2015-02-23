@@ -56,7 +56,9 @@ def _set_public_attrs_from_dict(obj, d, only_existing=True):
 
 
 class Config(object):
-    __slots__ = ['workdir', 'worker', 'scheduler', 'scheduler_args', 'python']
+    __slots__ = [
+        'workdir', 'worker', 'scheduler', 'scheduler_args', 'python',
+        'max_splits', 'min_items']
 
     def __init__(self):
         self.workdir = 'psywork'
@@ -64,6 +66,8 @@ class Config(object):
         self.scheduler = ImmediateRun()
         self.scheduler_args = None
         self.python = sys.executable
+        self.max_splits = 64
+        self.min_items = 4
 
     @classmethod
     def load_from_file(cls, filename):
@@ -138,8 +142,10 @@ task = TaskDef({taskpath!r})
     def create_split_subtask(self):
         code = '''
 from psyrun.split import Splitter
-Splitter({workdir!r}, task.pspace).split()
-        '''.format(workdir=self.splitter.workdir)
+Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
+        '''.format(
+            workdir=self.splitter.workdir, max_splits=self.task.max_splits,
+            min_items=self.task.min_items)
 
         name = self.task.name + ':split'
         return dict_to_task({
