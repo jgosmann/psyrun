@@ -34,6 +34,6 @@ class TestSplitter(object):
             save_outfile(load_infile(infile).build(), outfile)
 
         result_file = os.path.join(str(tmpdir), 'result.h5')
-        Splitter.merge(str(tmpdir), result_file)
+        Splitter.merge(splitter.outdir, result_file)
         result = load_results(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))

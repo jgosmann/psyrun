@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import argparse
+
+from psyrun.split import Splitter
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Merge psyrun output files.")
+    parser.add_argument(
+        'directory', type=str, help="Directory with files to merge.")
+    parser.add_argument(
+        'merged', type=str, help="File to write the merged result to.")
+    args = parser.parse_args()
+
+    Splitter.merge(args.directory, args.merged)

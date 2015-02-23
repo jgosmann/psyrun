@@ -176,8 +176,8 @@ task.worker.start(task.execute, {infile!r}, {outfile!r})
         result_file = os.path.join(self.splitter.workdir, 'result.h5')
         code = '''
 from psyrun.split import Splitter
-Splitter.merge({workdir!r}, {filename!r})
-        '''.format(workdir=self.splitter.workdir, filename=result_file)
+Splitter.merge({outdir!r}, {filename!r})
+        '''.format(outdir=self.splitter.outdir, filename=result_file)
 
         name = self.task.name + ':merge'
         file_deps = [f for _, f in self.splitter.iter_in_out_files()]

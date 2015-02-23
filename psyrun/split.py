@@ -42,8 +42,7 @@ class Splitter(object):
         return {k: [a.get(k, None) for a in args] for k in keys}
 
     @classmethod
-    def merge(cls, workdir, merged_filename):
-        outdir = cls._get_outdir(workdir)
+    def merge(cls, outdir, merged_filename):
         for filename in os.listdir(outdir):
             if os.path.splitext(filename)[1] != '.h5':
                 continue
