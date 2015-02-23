@@ -118,8 +118,8 @@ class FanOutSubtaskCreator(object):
     def _submit(self, code, name, depends_on=None):
         if depends_on is not None:
             try:
-                len(depends_on)
-            except TypeError:
+                depends_on = list(depends_on.values())
+            except AttributeError:
                 depends_on = [depends_on]
         code = '''
 import sys
