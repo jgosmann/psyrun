@@ -111,7 +111,8 @@ class PackageLoader(TaskLoader):
 class FanOutSubtaskCreator(object):
     def __init__(self, task):
         self.splitter = Splitter(
-            os.path.join(task.workdir, task.name), task.pspace)
+            os.path.join(task.workdir, task.name), task.pspace,
+            task.max_splits, task.min_items)
         self.task = task
 
     def _submit(self, code, name, depends_on=None):
