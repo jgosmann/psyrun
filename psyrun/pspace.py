@@ -1,15 +1,17 @@
 import itertools
 
+from psyrun.dict import dict_concat
+
 
 class _PSpaceObj(object):
     def __init__(self, keys):
         self._keys = keys
 
     def build(self):
-        return self._concat(*self.iterate())
-
-    def _concat(self, *args):
-        return {k: [a[k] for a in args] for k in self.keys()}
+        built = dict_concat(list(self.iterate()))
+        for k in self.keys():
+            built.setdefault(k, [])
+        return built
 
     def iterate(self):
         raise NotImplementedError()
