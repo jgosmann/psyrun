@@ -4,7 +4,9 @@ import subprocess
 
 
 class Scheduler(object):
-    def submit(self, args, depends_on=None, scheduler_args=None):
+    def submit(
+            self, args, depends_on=None, output_file=None,
+            scheduler_args=None):
         """Returns job id."""
         raise NotImplementedError()
 
@@ -30,44 +32,39 @@ class ImmediateRun(Scheduler):
 
 
 class Sqsub(Scheduler):
-    class Args(object):
-        def __init__(self, copy_from=None):
-            self.arg_list = []
-            if copy_from is not None:
-                self.arg_list.extend(copy_from.arg_list)
+    class _Option(object):
+        def __init__(self, name, conversion=str):
+            self.name = name
+            self.conversion = conversion
 
-        def timelimit(self, limit):
-            self.arg_list.extend(['-r', limit])
-            return self
+        def build(self, value):
+            raise NotImplementedError()
 
-        def output_file(self, filename):
-            self.arg_list.extend(['-o', filename])
-            return self
+    class _ShortOption(_Option):
+        def build(self, value):
+            return [self.name, self.conversion(value)]
 
-        def n_cpus(self, n_cpus):
-            self.arg_list.extend(['-n', n_cpus])
-            return self
+    class _LongOption(_Option):
+        def build(self, value):
+            return [self.name + '=' + self.conversion(value)]
 
-        def n_nodes(self, n_nodes):
-            self.arg_list.extend(['-N', n_nodes])
-            return self
+    KNOWN_ARGS = {
+        'timelimit': _ShortOption('-r'),
+        'output_file': _ShortOption('-o'),
+        'n_cpus': _ShortOption('-n'),
+        'n_nodes': _ShortOption('-N'),
+        'memory': _LongOption('--mpp'),
+        'depends_on': _ShortOption(
+            '-w', lambda jobids: ','.join(str(x) for x in jobids)),
+        'idfile': _LongOption('--idfile'),
+        'name': _ShortOption('-j')
+    }
 
-        def memory(self, limit):
-            self.arg_list.extend(['--mpp=' + limit])
-            return self
-
-        def depends_on(self, jobids):
-            self.arg_list.extend(['-w', ','.join(str(x) for x in jobids)])
-            return self
-
-        def idfile(self, idfile):
-            self.arg_list.extend(['--idfile=' + idfile])
-            return self
-
-        def name(self, name):
-            self.arg_list.extend(['-j', name])
-            return self
-
+    def build_args(self, **kwargs):
+        args = []
+        for k, v in kwargs.items():
+            args.append(self.KNOWN_ARGS[k].build(v))
+        return args
 
     def __init__(self, workdir=None):
         if workdir is None:
@@ -81,12 +78,14 @@ class Sqsub(Scheduler):
             self, args, depends_on=None, output_file=None,
             scheduler_args=None):
         """Returns job id."""
-        scheduler_args = self.Args(scheduler_args).idfile(self.idfile)
+        scheduler_args = dict(scheduler_args)
+        scheduler_args['idfile'] = self.idfile
         if depends_on is not None:
-            scheduler_args.depends_on(depends_on)
+            scheduler_args['depends_on'] = depends_on
         if output_file is not None:
-            scheduler_args.output_file(output_file)
-        subprocess.check_call(['sqsub'] + scheduler_args.arg_list + args)
+            scheduler_args['output_file'] = output_file
+        subprocess.check_call(
+            ['sqsub'] + self.build_args(**scheduler_args) + args)
         with open(self.idfile, 'r') as f:
             return int(f.read())
 
