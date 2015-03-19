@@ -4,9 +4,7 @@ import subprocess
 
 
 class Scheduler(object):
-    def submit(
-            self, args, depends_on=None, output_file=None,
-            scheduler_args=None):
+    def submit(self, args, scheduler_args=None):
         """Returns job id."""
         raise NotImplementedError()
 
@@ -18,9 +16,7 @@ class Scheduler(object):
 
 
 class ImmediateRun(Scheduler):
-    def submit(
-            self, args, depends_on=None, output_file=None,
-            scheduler_args=None):
+    def submit(self, args, scheduler_args=None):
         subprocess.call(args)
         return 0
 
@@ -74,16 +70,13 @@ class Sqsub(Scheduler):
         self.workdir = workdir
         self.idfile = os.path.join(workdir, 'idfile')
 
-    def submit(
-            self, args, depends_on=None, output_file=None,
-            scheduler_args=None):
+    def submit(self, args, scheduler_args=None):
         """Returns job id."""
-        scheduler_args = dict(scheduler_args)
+        if scheduler_args is None:
+            scheduler_args = dict()
+        else:
+            scheduler_args = dict(scheduler_args)
         scheduler_args['idfile'] = self.idfile
-        if depends_on is not None:
-            scheduler_args['depends_on'] = depends_on
-        if output_file is not None:
-            scheduler_args['output_file'] = output_file
         subprocess.check_call(
             ['sqsub'] + self.build_args(**scheduler_args) + args)
         with open(self.idfile, 'r') as f:

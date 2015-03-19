@@ -64,7 +64,7 @@ class Config(object):
         self.workdir = 'psywork'
         self.worker = SerialWorker()
         self.scheduler = ImmediateRun()
-        self.scheduler_args = None
+        self.scheduler_args = dict()
         self.python = sys.executable
         self.max_splits = 64
         self.min_items = 4
@@ -133,12 +133,16 @@ task = TaskDef({taskpath!r})
             path=sys.path, taskdir=os.path.dirname(self.task.path),
             taskpath=self.task.path, code=code)
         codefile = os.path.join(self.splitter.workdir, name + '.py')
-        logfile = os.path.join(self.splitter.workdir, name + '.log')
+        scheduler_args = dict(self.task.scheduler_args)
+        scheduler_args.update({
+            'output_file': os.path.join(self.splitter.workdir, name + '.log'),
+            'depends_on': depends_on,
+            'name': name
+        })
         with open(codefile, 'w') as f:
             f.write(code)
         return {'id': self.task.scheduler.submit(
-            [self.task.python, codefile], depends_on=depends_on,
-            output_file=logfile, scheduler_args=self.task.scheduler_args)}
+            [self.task.python, codefile], scheduler_args)}
 
     def create_split_subtask(self):
         code = '''
