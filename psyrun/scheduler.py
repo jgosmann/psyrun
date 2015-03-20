@@ -38,10 +38,14 @@ class Sqsub(Scheduler):
 
     class _ShortOption(_Option):
         def build(self, value):
+            if value is None:
+                return []
             return [self.name, self.conversion(value)]
 
     class _LongOption(_Option):
         def build(self, value):
+            if value is None:
+                return []
             return [self.name + '=' + self.conversion(value)]
 
     KNOWN_ARGS = {
@@ -59,7 +63,7 @@ class Sqsub(Scheduler):
     def build_args(self, **kwargs):
         args = []
         for k, v in kwargs.items():
-            args.append(self.KNOWN_ARGS[k].build(v))
+            args.extend(self.KNOWN_ARGS[k].build(v))
         return args
 
     def __init__(self, workdir=None):
