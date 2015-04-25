@@ -2,6 +2,9 @@ import os
 
 
 def init_virtualenv(venv=None):
+    if os.environ.get('CI', False):
+        return
+
     if venv is None:
         venv = os.environ.get('VIRTUAL_ENV', None)
 
