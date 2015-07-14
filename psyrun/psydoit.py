@@ -58,7 +58,8 @@ def _set_public_attrs_from_dict(obj, d, only_existing=True):
 class Config(object):
     __slots__ = [
         'workdir', 'result_file', 'worker', 'scheduler', 'scheduler_args',
-        'python', 'max_splits', 'min_items'] 
+        'python', 'max_splits', 'min_items']
+
     def __init__(self):
         self.workdir = 'psywork'
         self.result_file = None
@@ -101,11 +102,18 @@ class PackageLoader(TaskLoader):
         return task_list, {}
 
     def create_task(self, task):
+        group_task = dict_to_task({
+            'name': task.name,
+            'actions': None
+        })
+        group_task.has_subtask = True
+
         creator = FanOutSubtaskCreator(task)
-        yield creator.create_split_subtask()
-        for st in creator.create_process_subtasks():
+        for st in creator.create_subtasks():
+            st.is_subtask = True
+            group_task.task_dep.append(st.name)
             yield st
-        yield creator.create_merge_subtask()
+        yield group_task
 
 
 class FanOutSubtaskCreator(object):
@@ -149,6 +157,12 @@ task = TaskDef({taskpath!r})
             f.write(code)
         return {'id': self.task.scheduler.submit(
             [self.task.python, codefile], scheduler_args)}
+
+    def create_subtasks(self):
+        yield self.create_split_subtask()
+        for st in self.create_process_subtasks():
+            yield st
+        yield self.create_merge_subtask()
 
     def create_split_subtask(self):
         code = '''
