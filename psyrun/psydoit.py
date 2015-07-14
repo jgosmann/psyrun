@@ -57,11 +57,11 @@ def _set_public_attrs_from_dict(obj, d, only_existing=True):
 
 class Config(object):
     __slots__ = [
-        'workdir', 'worker', 'scheduler', 'scheduler_args', 'python',
-        'max_splits', 'min_items']
-
+        'workdir', 'result_file', 'worker', 'scheduler', 'scheduler_args',
+        'python', 'max_splits', 'min_items'] 
     def __init__(self):
         self.workdir = 'psywork'
+        self.result_file = None
         self.worker = SerialWorker()
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
@@ -190,7 +190,10 @@ task.worker.start(task.execute, {infile!r}, {outfile!r})
         yield group_task
 
     def create_merge_subtask(self):
-        result_file = os.path.join(self.splitter.workdir, 'result.h5')
+        if self.task.result_file:
+            result_file = self.task.result_file
+        else:
+            result_file = os.path.join(self.splitter.workdir, 'result.h5')
         code = '''
 from psyrun.split import Splitter
 Splitter.merge({outdir!r}, {filename!r})
