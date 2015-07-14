@@ -26,3 +26,22 @@ def test_merging_multidimensional_results(tmpdir):
 
     saved = load_results(filename)
     assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
+
+
+def test_merging_results_with_varying_dimensionality(tmpdir):
+    filename = str(tmpdir.join('r.h5'))
+
+    data1 = {'a': np.zeros((1, 1, 2))}
+    data2 = {'a': np.ones((2, 2, 1))}
+    expected = np.array([
+        [[0., 0.], [np.nan, np.nan]],
+        [[1., np.nan], [1., np.nan]],
+        [[1., np.nan], [1., np.nan]]])
+
+    append_to_results(data1, filename)
+    append_to_results(data2, filename)
+
+    saved = load_results(filename)
+    assert expected.shape == saved['a'].shape
+    for a, b in zip(expected.flat, saved['a'].flat):
+        assert a == b or (np.isnan(a) and np.isnan(b))
