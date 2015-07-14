@@ -122,6 +122,12 @@ class FanOutSubtaskCreator(object):
             except AttributeError:
                 depends_on = [depends_on]
         code = '''
+try:
+    import faulthandler
+    faulthandler.enable()
+except:
+    pass
+
 import sys
 sys.path = {path!r}
 sys.path.insert(0, {taskdir!r})
