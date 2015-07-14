@@ -8,6 +8,10 @@ def get_result(fn, params):
     return result
 
 
+def map_pspace(fn, pspace):
+    return dict_concat(list(get_result(fn, p) for p in pspace.iterate()))
+
+
 class Worker(object):
     def start(self, fn, infile, outfile):
         raise NotImplementedError()
@@ -16,8 +20,7 @@ class Worker(object):
 class SerialWorker(Worker):
     def start(self, fn, infile, outfile):
         pspace = load_infile(infile)
-        data = dict_concat(list(
-            get_result(fn, p) for p in pspace.iterate()))
+        data = map_pspace(fn, pspace)
         save_outfile(data, outfile)
 
 
