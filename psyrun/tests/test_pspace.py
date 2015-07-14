@@ -81,8 +81,10 @@ class TestSum(object):
 
     def test_sum_distinct_params(self):
         space = (Param(a=[1]) + Param(b=[2])).build()
-        assert space['a'] == [1, None]
-        assert space['b'] == [None, 2]
+        assert space['a'][0] == 1
+        assert space['b'][1] == 2
+        assert np.isnan(space['a'][1])
+        assert np.isnan(space['b'][0])
 
     def test_sum_with_empty(self):
         space = (Param(a=[1]) + Param()).build()
@@ -91,7 +93,7 @@ class TestSum(object):
     def test_sum_with_zero_elements(self):
         space = (Param(a=[1]) + Param(b=[])).build()
         assert space['a'] == [1]
-        assert space['b'] == [None]
+        assert np.isnan(space['b'][0])
 
     def test_legth(self):
         assert len(Param(a=[1]) + Param(a=[2, 3])) == 3

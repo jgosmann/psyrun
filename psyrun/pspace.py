@@ -1,5 +1,7 @@
 import itertools
 
+import numpy as np
+
 from psyrun.dict import dict_concat
 
 
@@ -134,7 +136,7 @@ class Sum(_PSpaceObj):
         self.right = right
 
     def iterate(self):
-        return ({k: item.get(k, None) for k in self.keys()}
+        return ({k: item.get(k, np.nan) for k in self.keys()}
                 for item in itertools.chain(
                     self.left.iterate(), self.right.iterate()))
 
