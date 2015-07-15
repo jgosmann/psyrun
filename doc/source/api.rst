@@ -11,6 +11,10 @@ pspace module
 
 .. automodule:: psyrun.pspace
 
+venv module
+-----------
+.. automodule:: psyrun.venv
+
 worker module
 -------------
 

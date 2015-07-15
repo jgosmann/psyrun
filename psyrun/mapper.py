@@ -1,3 +1,5 @@
+"""Mappers to map functions onto parameter spaces."""
+
 from psyrun.pspace import dict_concat
 
 
