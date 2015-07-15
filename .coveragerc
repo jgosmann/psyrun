@@ -3,4 +3,4 @@ source = psyrun
 omit =
     */tests/test*
     psyrun/tests/tasks/*
-parallel = True
+parallel = False
