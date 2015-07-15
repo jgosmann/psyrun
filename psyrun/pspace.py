@@ -215,7 +215,7 @@ class Product(_PSpaceObj):
 
 
 class Sum(_PSpaceObj):
-    """Implements the union of two parameter spaces.
+    """Implements the concatenation of two parameter spaces.
 
     Parameters
     ----------
