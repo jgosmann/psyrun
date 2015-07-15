@@ -1,7 +1,7 @@
 import os.path
 import shutil
 
-from psyrun.io import load_results
+from psyrun.io import load_dict_h5
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mapper import map_pspace
 
@@ -51,5 +51,5 @@ def test_psydoit(tmpdir):
         f.write('workdir = {0!r}'.format(workdir))
 
     psydoit(taskdir, ['--db-file', dbfile])
-    result = load_results(os.path.join(workdir, 'square', 'result.h5'))
+    result = load_dict_h5(os.path.join(workdir, 'square', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]

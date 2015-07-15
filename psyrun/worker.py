@@ -1,4 +1,5 @@
-from psyrun.io import load_infile, save_outfile
+from psyrun.io import load_dict_h5, save_dict_h5
+from psyrun.pspace import Param
 
 
 class Worker(object):
@@ -31,6 +32,6 @@ class Worker(object):
         outfile : str
             Output filename for the results.
         """
-        pspace = load_infile(infile)
+        pspace = Param(**load_dict_h5(infile))
         data = self.mapper(fn, pspace, **self.mapper_kwargs)
-        save_outfile(data, outfile)
+        save_dict_h5(outfile, data)

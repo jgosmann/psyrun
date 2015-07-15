@@ -2,7 +2,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import load_results, save_infile
+from psyrun.io import load_dict_h5, save_dict_h5
 from psyrun.pspace import Param
 from psyrun.mapper import map_pspace, map_pspace_parallel
 from psyrun.worker import Worker
@@ -16,9 +16,9 @@ def square(a):
 def test_worker(mapper, tmpdir):
     infile = os.path.join(str(tmpdir), 'in.h5')
     outfile = os.path.join(str(tmpdir), 'out.h5')
-    save_infile(Param(a=range(7)).build(), infile)
+    save_dict_h5(infile, Param(a=range(7)).build())
     worker = Worker(mapper)
     worker.start(square, infile, outfile)
-    result = load_results(outfile)
+    result = load_dict_h5(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

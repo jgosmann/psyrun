@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import load_infile, load_results, save_outfile
+from psyrun.io import load_dict_h5, save_dict_h5
 from psyrun.pspace import Param
 from psyrun.split import Splitter
 
@@ -31,9 +31,9 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            save_outfile(load_infile(infile).build(), outfile)
+            save_dict_h5(outfile, load_dict_h5(infile))
 
         result_file = os.path.join(str(tmpdir), 'result.h5')
         Splitter.merge(splitter.outdir, result_file)
-        result = load_results(result_file)
+        result = load_dict_h5(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))

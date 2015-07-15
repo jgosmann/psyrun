@@ -1,14 +1,14 @@
 import numpy as np
 
-from psyrun.io import append_to_results, load_infile, load_results, save_infile
+from psyrun.io import append_to_results, load_dict_h5, save_dict_h5
 from psyrun.pspace import Param
 
 
 def test_infile_with_none(tmpdir):
     filename = str(tmpdir.join('infile.h5'))
     pspace = (Param(a=[1.], b=[1.]) + Param(a=[2.], c=[2.])).build()
-    save_infile(pspace, filename)
-    saved_pspace = load_infile(filename).build()
+    save_dict_h5(filename, pspace)
+    saved_pspace = load_dict_h5(filename)
     assert sorted(pspace.keys()) == sorted(saved_pspace.keys())
     for k in pspace:
         for a, b in zip(pspace[k], saved_pspace[k]):
@@ -24,7 +24,7 @@ def test_merging_multidimensional_results(tmpdir):
     append_to_results(data1, filename)
     append_to_results(data2, filename)
 
-    saved = load_results(filename)
+    saved = load_dict_h5(filename)
     assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
 
 
@@ -41,7 +41,7 @@ def test_merging_results_with_varying_dimensionality(tmpdir):
     append_to_results(data1, filename)
     append_to_results(data2, filename)
 
-    saved = load_results(filename)
+    saved = load_dict_h5(filename)
     assert expected.shape == saved['a'].shape
     for a, b in zip(expected.flat, saved['a'].flat):
         assert a == b or (np.isnan(a) and np.isnan(b))
