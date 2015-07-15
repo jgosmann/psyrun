@@ -59,3 +59,39 @@ allocating more memory than necessary.
 {'a': 1, 'b': 4}
 {'a': 2, 'b': 3}
 {'a': 2, 'b': 4}
+
+
+Evaluating functions on parameter spaces
+----------------------------------------
+
+Once the parameter space is constructed, one probably wants to evaluate
+a function on it. For this the function needs to accept a set of parameters as
+keyword arguments and it has to return it results as a dictionary. Here is
+a simple example function:
+
+>>> def basic_math(a, b):
+...     return {'sum': a + b, 'product': a * b}
+
+The :func:`.map_pspace` function allows to easily map such a function onto a
+parameter space.
+
+>>> from pprint import pprint
+>>> from psyrun import map_pspace, pspace
+>>> pspace = Param(a=[1, 2]) * Param(b=[3, 4])
+>>> pprint(map_pspace(basic_math, pspace))
+{'a': [1, 1, 2, 2],
+ 'b': [3, 4, 3, 4],
+ 'product': [3, 4, 6, 8],
+ 'sum': [4, 5, 5, 6]}
+
+This will evaluate each set of parameters serially. If the evaluated function
+itself is not parallelized it is probably more efficient to do the evaluation
+for different sets of parameter values in parallel. If you have
+`joblib <https://pythonhosted.org/joblib/>`_ installed and your function can be
+pickled (e.g., it can be imported from a Python module), you can use
+:func:`.map_pspace_parallel` to parallelize the evaluation of parameter sets.
+
+>>> from psyrun import map_pspace_parallel
+>>> from psyrun.tests.test_mapper import square
+>>> pprint(map_pspace_parallel(square, Param(a=[1, 2, 3])))
+{'a': [1, 2, 3], 'x': [1, 4, 9]}

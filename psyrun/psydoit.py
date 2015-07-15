@@ -9,7 +9,7 @@ from doit.doit_cmd import DoitMain
 
 from psyrun.split import Splitter
 from psyrun.scheduler import ImmediateRun
-from psyrun.worker import SerialWorker
+from psyrun.mapper import map_pspace
 from psyrun.venv import init_virtualenv
 
 
@@ -57,13 +57,14 @@ def _set_public_attrs_from_dict(obj, d, only_existing=True):
 
 class Config(object):
     __slots__ = [
-        'workdir', 'result_file', 'worker', 'scheduler', 'scheduler_args',
-        'python', 'max_splits', 'min_items']
+        'workdir', 'result_file', 'mapper', 'mapper_kwargs', 'scheduler',
+        'scheduler_args', 'python', 'max_splits', 'min_items']
 
     def __init__(self):
         self.workdir = 'psywork'
         self.result_file = None
-        self.worker = SerialWorker()
+        self.mapper = map_pspace
+        self.mapper_kwargs = {}
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
         self.python = sys.executable
@@ -188,7 +189,9 @@ Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
         for i, (infile, outfile) in enumerate(
                 self.splitter.iter_in_out_files()):
             code = '''
-task.worker.start(task.execute, {infile!r}, {outfile!r})
+from psyrun.worker import Worker
+Worker(task.mapper, **task.mapper_kwargs).start(
+    task.execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
 
             name = '{0}:process:{1}'.format(self.task.name, i)

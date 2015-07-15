@@ -1,38 +1,36 @@
 from psyrun.io import load_infile, save_outfile
-from psyrun.pspace import dict_concat
-
-
-def get_result(fn, params):
-    result = dict(params)
-    result.update(fn(**params))
-    return result
-
-
-def map_pspace(fn, pspace):
-    return dict_concat(list(get_result(fn, p) for p in pspace.iterate()))
 
 
 class Worker(object):
-    def start(self, fn, infile, outfile):
-        raise NotImplementedError()
+    """Maps a function to the parameter space loaded from a file and writes the
+    result to an output file.
 
+    Parameters
+    ----------
+    mapper : function
+        Function that takes another function, a parameter space, and
+        potentially further keyword arguments and returns the result of mapping
+        the function onto the parameter space.
+    mapper_kwargs : dict
+        Additional keyword arguments to pass to the `mapper`.
+    """
 
-class SerialWorker(Worker):
+    def __init__(self, mapper, **mapper_kwargs):
+        self.mapper = mapper
+        self.mapper_kwargs = mapper_kwargs
+
     def start(self, fn, infile, outfile):
+        """Start processing a parameter space.
+
+        Parameters
+        ----------
+        fn : function
+            Function to evaluate on the parameter space.
+        infile : str
+            Parameter space input filename.
+        outfile : str
+            Output filename for the results.
+        """
         pspace = load_infile(infile)
-        data = map_pspace(fn, pspace)
-        save_outfile(data, outfile)
-
-
-class ParallelWorker(Worker):
-    def __init__(self, n_jobs=-1, backend='multiprocessing'):
-        self.n_jobs = n_jobs
-        self.backend = backend
-
-    def start(self, fn, infile, outfile):
-        import joblib
-        pspace = load_infile(infile)
-        parallel = joblib.Parallel(n_jobs=self.n_jobs, backend=self.backend)
-        data = dict_concat(parallel(
-            joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
+        data = self.mapper(fn, pspace, **self.mapper_kwargs)
         save_outfile(data, outfile)

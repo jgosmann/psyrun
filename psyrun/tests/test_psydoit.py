@@ -3,7 +3,7 @@ import shutil
 
 from psyrun.io import load_results
 from psyrun.psydoit import TaskDef, Config, psydoit
-from psyrun.worker import Worker
+from psyrun.mapper import map_pspace
 
 
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
@@ -17,7 +17,8 @@ def test_load_task_defaults():
     task = TaskDef(get_task_path('square'))
     assert task.path == get_task_path('square')
     assert task.name == 'square'
-    assert isinstance(task.worker, Worker)
+    assert task.mapper == map_pspace
+    assert task.mapper_kwargs == {}
     assert hasattr(task, 'scheduler')
     assert hasattr(task, 'scheduler_args')
     assert hasattr(task, 'python')

@@ -4,31 +4,20 @@ import pytest
 
 from psyrun.io import load_results, save_infile
 from psyrun.pspace import Param
-from psyrun.worker import map_pspace, ParallelWorker, SerialWorker
+from psyrun.mapper import map_pspace, map_pspace_parallel
+from psyrun.worker import Worker
 
 
 def square(a):
     return {'x': a ** 2}
 
 
-def test_map_pspace():
-    calls = []
-    def fn(**kwargs):
-        calls.append(kwargs)
-        return {'result': 42}
-
-    pspace = Param(a=[1, 2])
-    result = map_pspace(fn, pspace)
-
-    assert calls == [{'a': 1}, {'a': 2}]
-    assert result == {'a': [1, 2], 'result': [42, 42]}
-
-
-@pytest.mark.parametrize('worker', [SerialWorker(), ParallelWorker()])
-def test_worker(worker, tmpdir):
+@pytest.mark.parametrize('mapper', [map_pspace, map_pspace_parallel])
+def test_worker(mapper, tmpdir):
     infile = os.path.join(str(tmpdir), 'in.h5')
     outfile = os.path.join(str(tmpdir), 'out.h5')
     save_infile(Param(a=range(7)).build(), infile)
+    worker = Worker(mapper)
     worker.start(square, infile, outfile)
     result = load_results(outfile)
     assert sorted(result['a']) == sorted(range(7))
