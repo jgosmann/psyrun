@@ -1,7 +1,19 @@
 import numpy as np
 import pytest
 
-from psyrun.pspace import AmbiguousOperationError, Param
+from psyrun.pspace import AmbiguousOperationError, dict_concat, Param
+
+
+@pytest.mark.parametrize('args,result', [
+    (({0: 0}, {0: 1}, {0: 2}), {0: [0, 1, 2]}),
+    (({0: 2},), {0: [2]}),
+    (({},), {}),
+    (({0: 0, 1: 1}, {0: 0, 1: 1}), {0: [0, 0], 1: [1, 1]}),
+    ((), {}),
+    (({0: 0}, {1: 1}), {0: [0, None], 1: [None, 1]})
+])
+def test_dict_concat(args, result):
+    assert dict_concat(args) == result
 
 
 class TestParam(object):
@@ -95,7 +107,7 @@ class TestSum(object):
         assert space['a'] == [1]
         assert np.isnan(space['b'][0])
 
-    def test_legth(self):
+    def test_length(self):
         assert len(Param(a=[1]) + Param(a=[2, 3])) == 3
 
 

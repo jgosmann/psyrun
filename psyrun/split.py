@@ -1,7 +1,7 @@
 import os
 import os.path
 
-from psyrun.dict import dict_concat
+from psyrun.pspace import dict_concat
 from psyrun.io import append_to_results, save_infile, load_results
 
 

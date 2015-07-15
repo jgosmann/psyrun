@@ -1,5 +1,5 @@
 from psyrun.io import load_infile, save_outfile
-from psyrun.dict import dict_concat
+from psyrun.pspace import dict_concat
 
 
 def get_result(fn, params):

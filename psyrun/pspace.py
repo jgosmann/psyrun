@@ -4,7 +4,32 @@ import itertools
 
 import numpy as np
 
-from psyrun.dict import dict_concat
+
+def dict_concat(args):
+    """Concatenates elements with the same key in the passed dictionaries.
+
+    Parameters
+    ----------
+    args : sequenece of dicts
+        Dictionaries with sequences to concatenate.
+
+    Returns
+    -------
+    dict
+        The dictionary with the union of all the keys of the dictionaries
+        passed in and elements with the same key concatenated. Missing elements
+        will be ``None``.
+
+    Examples
+    --------
+    >>> from pprint import pprint
+    >>> pprint(dict_concat(({'a': 0, 'b': 0}, {'a': 1})))
+    {'a': [0, 1], 'b': [0, None]}
+    """
+    keys = set()
+    for a in args:
+        keys = keys.union(a.keys())
+    return {k: [a.get(k, None) for a in args] for k in keys}
 
 
 class _PSpaceObj(object):
