@@ -95,3 +95,12 @@ pickled (e.g., it can be imported from a Python module), you can use
 >>> from psyrun.tests.test_mapper import square
 >>> pprint(map_pspace_parallel(square, Param(a=[1, 2, 3])))
 {'a': [1, 2, 3], 'x': [1, 4, 9]}
+
+
+Distributing jobs on a high-performance cluster
+-----------------------------------------------
+
+TODO: How to write and run psydoit tasks
+TODO: Set task parameters in global config file
+TODO: Explain data type limitations (including introducing padding NaNs converts 
+to float)
