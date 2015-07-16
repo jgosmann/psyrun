@@ -14,6 +14,16 @@ from psyrun.venv import init_virtualenv
 
 
 class TaskDef(object):
+    """Task defined by a Python file.
+
+    Parameters
+    ----------
+    path : str
+        Python file to load as task.
+    conf : :class:`.Config`
+        Default values for task parameters.
+    """
+
     TASK_PATTERN = re.compile(r'^task_(.*)$')
 
     def __init__(self, path, conf=None):
@@ -56,6 +66,35 @@ def _set_public_attrs_from_dict(obj, d, only_existing=True):
 
 
 class Config(object):
+    """Task configuration.
+
+
+    Attributes
+    ----------
+    workdir : str
+        Working directory to store task data in.
+    result_file : str or None
+        Path to save the results of the finished task at. If ``None``, this
+        defaults to ``'result.h5'`` in the `workdir`.
+    mapper : function
+        Function to map the task's ``execute`` function onto the parameter
+        space. Defaults to serial execution.
+    mapper_kwargs : dict
+        Additional keyword arguments for the `mapper` function.
+    scheduler : :class:`.Scheduler`
+        Scheduler to use to submit individual jobs. Defaults to
+        :class:`.ImmediateRun`.
+    scheduler_args : dict
+        Additional scheduler arguments.
+    python : str
+        Path to Python interpreter to use.
+    max_splits : int
+        Maximum number of splits of the parameter space. This limits the number
+        of jobs started.
+    min_items : int
+        Minimum number of parameter sets to evaluate per job.
+    """
+
     __slots__ = [
         'workdir', 'result_file', 'mapper', 'mapper_kwargs', 'scheduler',
         'scheduler_args', 'python', 'max_splits', 'min_items']
@@ -73,18 +112,44 @@ class Config(object):
 
     @classmethod
     def load_from_file(cls, filename):
+        """Load the config values from a Python file.
+
+        Parameters
+        ----------
+        filename : str
+            Python file to load.
+        """
         conf = cls()
         loaded_conf = _load_pyfile(filename)
         _set_public_attrs_from_dict(conf, loaded_conf)
         return conf
 
     def apply_as_default(self, task):
+        """Copies the attributes to a different object given they are not set
+        in that object.
+
+        Parameters
+        ----------
+        task : obj
+            Object to copy the attributes to.
+        """
         for attr in self.__slots__:
             if not hasattr(task, attr):
                 setattr(task, attr, getattr(self, attr))
 
 
 class PackageLoader(TaskLoader):
+    """Loads doit tasks from Python files.
+
+    Filenames have to match the regex defined in :const:`.TaskDef.TASK_PATTERN`.
+    See :class:`.Config` for supported module level variables in the task
+    definition.
+
+    Parameters
+    ----------
+    taskdir : str
+        Directory to load files from.
+    """
     def __init__(self, taskdir):
         self.taskdir = taskdir
         conffile = os.path.join(self.taskdir, 'psyconf.py')
@@ -109,7 +174,7 @@ class PackageLoader(TaskLoader):
         })
         group_task.has_subtask = True
 
-        creator = FanOutSubtaskCreator(task)
+        creator = DistributeSubtaskCreator(task)
         for st in creator.create_subtasks():
             st.is_subtask = True
             group_task.task_dep.append(st.name)
@@ -117,7 +182,15 @@ class PackageLoader(TaskLoader):
         yield group_task
 
 
-class FanOutSubtaskCreator(object):
+class DistributeSubtaskCreator(object):
+    """Create subtasks for to distribute parameter evaluations.
+
+    Parameters
+    ----------
+    task : :class:`.TaskDef`
+        Task definition to create subtasks for.
+    """
+
     def __init__(self, task):
         self.splitter = Splitter(
             os.path.join(task.workdir, task.name), task.pspace,
@@ -125,6 +198,23 @@ class FanOutSubtaskCreator(object):
         self.task = task
 
     def _submit(self, code, name, depends_on=None):
+        """Submits some code to execute to the task scheduler.
+
+        Parameters
+        ----------
+        code : str
+            Code to execute in job.
+        name : str
+            Job name.
+        depends_on : sequence
+            Job IDs that have to finish before the submitted code can be
+            executed.
+
+        Returns
+        -------
+        dict
+            Contains the id of the submitted job under the key ``'id'``.
+        """
         if depends_on is not None:
             try:
                 depends_on = list(depends_on.values())
@@ -160,6 +250,7 @@ task = TaskDef({taskpath!r})
             [self.task.python, codefile], scheduler_args)}
 
     def create_subtasks(self):
+        """Yields all the required subtasks."""
         yield self.create_split_subtask()
         for st in self.create_process_subtasks():
             yield st
@@ -228,5 +319,21 @@ Splitter.merge({outdir!r}, {filename!r})
 
 
 def psydoit(taskdir, argv=sys.argv[1:]):
+    """Runs psy-doit tasks.
+
+    Parameters
+    ----------
+    taskdir : str
+        Path to directory with task definition files.
+    argv : sequence of str
+        psy-doit command line arguments.
+
+    Returns
+    -------
+    int
+        Return code. See the `doit documentation
+        <http://pydoit.org/api/doit.doit_cmd.DoitMain-class.html#run>`_ for
+        more details.
+    """
     init_virtualenv()
     return DoitMain(PackageLoader(taskdir)).run(argv)
