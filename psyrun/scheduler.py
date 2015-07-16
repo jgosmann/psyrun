@@ -99,6 +99,8 @@ class ImmediateRun(Scheduler):
 
 
 class Sqsub(Scheduler):
+    """sqsub (sharcnet) scheduler."""
+
     class _Option(object):
         def __init__(self, name, conversion=str):
             self.name = name
@@ -185,9 +187,27 @@ class Sqsub(Scheduler):
             return int(f.read())
 
     def kill(self, jobid):
+        """Kill a job.
+
+        Parameters
+        ----------
+        jobid : int
+            Job to kill.
+        """
         subprocess.check_call(['sqkill', jobid])
 
     def get_status(self, jobid):
+        """Get the status of a job.
+
+        Parameters
+        ----------
+        jobid : int
+            Job to request status of.
+
+        Returns
+        -------
+        TODO
+        """
         p = subprocess.check_call(['sqjobs', jobid], stdout=subprocess.PIPE)
         line = p.stdout.readline()
         while line != '':
@@ -195,4 +215,5 @@ class Sqsub(Scheduler):
             if cols[0] == jobid:
                 return cols[3]
             line = p.stdout.readline()
+        # TODO parse output
         return None
