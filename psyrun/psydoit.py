@@ -7,7 +7,7 @@ from doit.task import dict_to_task
 from doit.cmd_base import TaskLoader
 from doit.doit_cmd import DoitMain
 
-from psyrun.split import Splitter
+from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
 from psyrun.mapper import map_pspace
 from psyrun.venv import init_virtualenv
@@ -280,7 +280,7 @@ Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
         for i, (infile, outfile) in enumerate(
                 self.splitter.iter_in_out_files()):
             code = '''
-from psyrun.worker import Worker
+from psyrun.processing import Worker
 Worker(task.mapper, **task.mapper_kwargs).start(
     task.execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)

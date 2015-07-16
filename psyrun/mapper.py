@@ -92,7 +92,7 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     --------
     >>> from pprint import pprint
     >>> from psyrun import Param
-    >>> from psyrun.tests.test_worker import square
+    >>> from psyrun.tests.test_processing import square
     >>> pprint(map_pspace_parallel(square, Param(a=[1, 2])))
     {'a': [1, 2], 'x': [1, 4]}
     """
