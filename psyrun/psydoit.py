@@ -93,11 +93,13 @@ class Config(object):
         of jobs started.
     min_items : int
         Minimum number of parameter sets to evaluate per job.
+    file_dep : list of str
+        Additional files the task depends on.
     """
 
     __slots__ = [
         'workdir', 'result_file', 'mapper', 'mapper_kwargs', 'scheduler',
-        'scheduler_args', 'python', 'max_splits', 'min_items']
+        'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep']
 
     def __init__(self):
         self.workdir = 'psywork'
@@ -109,6 +111,7 @@ class Config(object):
         self.python = sys.executable
         self.max_splits = 64
         self.min_items = 4
+        self.file_dep = []
 
     @classmethod
     def load_from_file(cls, filename):
@@ -177,6 +180,8 @@ class PackageLoader(TaskLoader):
         creator = DistributeSubtaskCreator(task)
         for st in creator.create_subtasks():
             st.is_subtask = True
+            st.file_dep.update(
+                os.path.join(self.taskdir, f) for f in task.file_dep)
             group_task.task_dep.append(st.name)
             yield st
         yield group_task
@@ -230,6 +235,9 @@ except:
 import sys
 sys.path = {path!r}
 sys.path.insert(0, {taskdir!r})
+
+import os
+os.chdir({taskdir!r})
 
 from psyrun.psydoit import TaskDef
 task = TaskDef({taskpath!r})
@@ -300,7 +308,7 @@ Worker(task.mapper, **task.mapper_kwargs).start(
             result_file = os.path.join(self.splitter.workdir, 'result.h5')
         code = '''
 from psyrun.processing import Splitter
-Splitter.merge({outdir!r}, {filename!r})
+Splitter.merge({outdir!r}, {filename!r}, append=False)
         '''.format(outdir=self.splitter.outdir, filename=result_file)
 
         name = self.task.name + ':merge'

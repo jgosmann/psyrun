@@ -1,6 +1,8 @@
 import os.path
 import shutil
 
+import pytest
+
 from psyrun.io import load_dict_h5
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mapper import map_pspace
@@ -41,15 +43,36 @@ def test_load_config_from_file(tmpdir):
     assert conf.python == 'env python'
 
 
-def test_psydoit(tmpdir):
-    taskdir = os.path.join(str(tmpdir), 'tasks')
-    workdir = os.path.join(str(tmpdir), 'work')
-    dbfile = os.path.join(str(tmpdir), 'doit.db')
+class TaskEnv(object):
+    def __init__(self, tmpdir):
+        self.taskdir = os.path.join(str(tmpdir), 'tasks')
+        self.workdir = os.path.join(str(tmpdir), 'work')
+        self.dbfile = os.path.join(str(tmpdir), 'doit.db')
 
-    shutil.copytree(TASKDIR, taskdir)
-    with open(os.path.join(taskdir, 'psyconf.py'), 'w') as f:
-        f.write('workdir = {0!r}'.format(workdir))
+        shutil.copytree(TASKDIR, self.taskdir)
+        with open(os.path.join(self.taskdir, 'psyconf.py'), 'w') as f:
+            f.write('workdir = {0!r}'.format(self.workdir))
 
-    psydoit(taskdir, ['--db-file', dbfile])
-    result = load_dict_h5(os.path.join(workdir, 'square', 'result.h5'))
+
+@pytest.fixture
+def taskenv(tmpdir):
+    return TaskEnv(tmpdir)
+
+
+def test_psydoit(taskenv):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    result = load_dict_h5(os.path.join(taskenv.workdir, 'square', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
+
+def test_psydoit_file_dep(taskenv):
+    with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
+        f.write('2')
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
+    result = load_dict_h5(os.path.join(taskenv.workdir, 'file_dep', 'result.h5'))
+    assert sorted(result['y']) == [4]
+
+    with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
+        f.write('3')
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
+    result = load_dict_h5(os.path.join(taskenv.workdir, 'file_dep', 'result.h5'))
+    assert sorted(result['y']) == [8]

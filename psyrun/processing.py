@@ -56,7 +56,7 @@ class Splitter(object):
             save_dict_h5(os.path.join(self.indir, filename), block)
 
     @classmethod
-    def merge(cls, outdir, merged_filename):
+    def merge(cls, outdir, merged_filename, append=True):
         """Merge processed files together.
 
         Parameters
@@ -65,7 +65,12 @@ class Splitter(object):
             Directory with the output files.
         merged_filename : str
             Filename of file to save with the merged results.
+        append : bool
+            If ``True`` the merged data will be appended, otherwise the file
+            will be overwritten with the merged data.
         """
+        if not append:
+            save_dict_h5(merged_filename, {})
         for filename in os.listdir(outdir):
             if os.path.splitext(filename)[1] != '.h5':
                 continue
