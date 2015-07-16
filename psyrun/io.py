@@ -61,14 +61,14 @@ def append_to_results(data, filename, nodename='/psyrun'):
                 if shape == node.shape[1:]:
                     node.append(v)
                 else:
-                    # FIXME use save name for tmp node
+                    tmp_node = _get_tmp_node_name(h5)
                     new_node = h5.create_earray(
-                        '/tmp', k, atom=tables.Atom.from_dtype(v.dtype),
+                        tmp_node, k, atom=tables.Atom.from_dtype(v.dtype),
                         shape=(0,) + shape, createparents=True)
                     for row in node.read():
                         new_node.append(_match_shape([row], shape))
                     new_node.append(v)
-                    h5.move_node('/tmp', nodename, k, k, overwrite=True)
+                    h5.move_node(tmp_node, nodename, k, k, overwrite=True)
 
 
 def _min_shape(args):
@@ -80,8 +80,18 @@ def _match_shape(a, shape):
     if a.shape[1:] == shape:
         return a
 
-    matched = np.empty((a.shape[0],) + shape)  # TODO: If float dtype use smallest possible one
+    dtype = a.dtype
+    if not np.issubdtype(dtype, float):
+        dtype = float
+    matched = np.empty((a.shape[0],) + shape, dtype=dtype)
     matched.fill(np.nan)
 
     matched[np.ix_(*(range(x) for x in a.shape))] = a
     return matched
+
+
+def _get_tmp_node_name(h5):
+    i = 0
+    while '/tmp{0}'.format(i) in h5:
+        i += 1
+    return '/tmp{0}'.format(i)
