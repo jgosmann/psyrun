@@ -2,7 +2,7 @@ import os
 import os.path
 
 from psyrun.pspace import dict_concat
-from psyrun.io import append_to_results, load_dict_h5, save_dict_h5
+from psyrun.io import append_dict_h5, load_dict_h5, save_dict_h5
 
 
 class Splitter(object):
@@ -42,7 +42,7 @@ class Splitter(object):
             if os.path.splitext(filename)[1] != '.h5':
                 continue
             infile = os.path.join(outdir, filename)
-            append_to_results(load_dict_h5(infile), merged_filename)
+            append_dict_h5(merged_filename, load_dict_h5(infile))
 
     def iter_in_out_files(self):
         return ((os.path.join(self.indir, f), os.path.join(self.outdir, f))

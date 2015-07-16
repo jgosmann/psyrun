@@ -1,6 +1,6 @@
 import numpy as np
 
-from psyrun.io import append_to_results, load_dict_h5, save_dict_h5
+from psyrun.io import append_dict_h5, load_dict_h5, save_dict_h5
 from psyrun.pspace import Param
 
 
@@ -21,8 +21,8 @@ def test_merging_multidimensional_results(tmpdir):
     data1 = {'a': np.zeros((2, 2, 2))}
     data2 = {'a': np.ones((3, 2, 2))}
 
-    append_to_results(data1, filename)
-    append_to_results(data2, filename)
+    append_dict_h5(filename, data1)
+    append_dict_h5(filename, data2)
 
     saved = load_dict_h5(filename)
     assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
@@ -38,8 +38,8 @@ def test_merging_results_with_varying_dimensionality(tmpdir):
         [[1., np.nan], [1., np.nan]],
         [[1., np.nan], [1., np.nan]]])
 
-    append_to_results(data1, filename)
-    append_to_results(data2, filename)
+    append_dict_h5(filename, data1)
+    append_dict_h5(filename, data2)
 
     saved = load_dict_h5(filename)
     assert expected.shape == saved['a'].shape

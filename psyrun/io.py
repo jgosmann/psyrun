@@ -45,7 +45,22 @@ def load_dict_h5(filename, node='/psyrun'):
         return {node._v_name: node.read() for node in h5.iter_nodes(node)}
 
 
-def append_to_results(data, filename, nodename='/psyrun'):
+def append_dict_h5(filename, data, nodename='/psyrun'):
+    """Appends to a saved dictionary in an HDF5 file.
+
+    The shape of already stored data and the new data will be padded with
+    ``nan`` as necessary to make the shapes match. If the stored data has to be
+    padded, this will load all of the stored data into memory.
+
+    Parameters
+    ----------
+    filename : str
+        Filename of file to write to.
+    data : dict
+        Data to store.
+    node : str, optional
+        Node in the HDF5 file to store the data at.
+    """
     with tables.open_file(filename, 'a') as h5:
         for k, v in data.items():
             shape = _min_shape(np.asarray(x).shape for x in v)
