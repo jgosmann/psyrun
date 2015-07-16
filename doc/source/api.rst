@@ -11,6 +11,11 @@ mapper module
 
 .. automodule:: psyrun.mapper
 
+processing module
+-------------
+
+.. automodule:: psyrun.processing
+
 pspace module
 -------------
 
@@ -29,8 +34,3 @@ scheduler module
 venv module
 -----------
 .. automodule:: psyrun.venv
-
-worker module
--------------
-
-.. automodule:: psyrun.worker
