@@ -64,6 +64,7 @@ def test_psydoit(taskenv):
     result = load_dict_h5(os.path.join(taskenv.workdir, 'square', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
+
 def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
@@ -76,3 +77,17 @@ def test_psydoit_file_dep(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
     result = load_dict_h5(os.path.join(taskenv.workdir, 'file_dep', 'result.h5'))
     assert sorted(result['y']) == [8]
+
+
+# TODO: need ability to retrieve job status (and test for it)
+# TODO: does not submit jobs that are still queued
+# TODO: submits merge job if not queued and result.h5 is missing
+# TODO: does not submit processing jobs if job output file is missing, but
+# result file is still up-to-date
+# TODO: resubmits processing jobs of job output file and result file are missing
+# TODO: does not submit split job if job input file is missing, but all job
+# output files are up-to-date
+# TODO: does not submit split job if job input file is missing, but result file
+# is still up-to-date
+# TODO: resubmits split job if job input file is missing, job output file is
+# missing and result file is missing
