@@ -1,6 +1,11 @@
 API Documentation
 =================
 
+io module
+---------
+
+.. automodule:: psyrun.io
+
 mapper module
 -------------
 
@@ -10,6 +15,16 @@ pspace module
 -------------
 
 .. automodule:: psyrun.pspace
+
+psydoit module
+--------------
+
+.. automodule:: psyrun.psydoit
+
+scheduler module
+----------------
+
+.. automodule:: psyrun.scheduler
 
 venv module
 -----------
