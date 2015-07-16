@@ -2,7 +2,7 @@
 
 import argparse
 
-from psyrun.split import Splitter
+from psyrun.processing import Splitter
 
 
 if __name__ == '__main__':
