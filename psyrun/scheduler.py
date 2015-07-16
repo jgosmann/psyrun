@@ -1,29 +1,100 @@
+"""Job scheduler."""
+
 import os
 import os.path
 import subprocess
 
 
 class Scheduler(object):
-    def submit(self, args, scheduler_args=None):
-        """Returns job id."""
+    """Scheduler interface."""
+
+    def submit(
+            self, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        """Submit a job.
+
+        Parameters
+        ----------
+        args : list
+            The command and arguments to execute.
+        output_filename : str
+            File to write process output to.
+        name : str, optional
+            Name of job.
+        depends_on : list of int, optional
+            IDs of jobs that need to finish first before the submitted job can
+            be started.
+        scheduler_args : dict, optional
+            Additional arguments for the scheduler.
+
+        Returns
+        -------
+        int
+            Job ID
+        """
         raise NotImplementedError()
 
     def kill(self, jobid):
+        """Kill a job.
+
+        Parameters
+        ----------
+        jobid : int
+            Job to kill.
+        """
         raise NotImplementedError()
 
     def get_status(self, jobid):
+        """Get the status of a job.
+
+        Parameters
+        ----------
+        jobid : int
+            Job to request status of.
+
+        Returns
+        -------
+        TODO
+        """
         raise NotImplementedError()
 
 
 class ImmediateRun(Scheduler):
-    def submit(self, args, scheduler_args=None):
-        subprocess.call(args)
+    """Runs jobs immediatly on the local machine."""
+
+    def submit(
+            self, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        """Submit a job.
+
+        Parameters
+        ----------
+        args : list
+            The command and arguments to execute.
+        output_filename : str
+            File to write process output to.
+        name : str, optional
+            Unused.
+        depends_on : list of int, optional
+            Unused
+        scheduler_args : ``None``, optional
+            Unused.
+
+        Returns
+        -------
+        int
+            0
+        """
+        with open(output_filename, 'a') as f:
+            subprocess.call(args, stdout=f, stderr=subprocess.STDOUT)
         return 0
 
     def kill(self, jobid):
+        """Has no effect."""
         pass
 
     def get_status(self, jobid):
+        """Has no effect."""
         pass
 
 
@@ -74,13 +145,40 @@ class Sqsub(Scheduler):
         self.workdir = workdir
         self.idfile = os.path.join(workdir, 'idfile')
 
-    def submit(self, args, scheduler_args=None):
-        """Returns job id."""
+    def submit(
+            self, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        """Submit a job.
+
+        Parameters
+        ----------
+        args : list
+            The command and arguments to execute.
+        output_filename : str
+            File to write process output to.
+        name : str, optional
+            Name of job.
+        depends_on : list of int, optional
+            IDs of jobs that need to finish first before the submitted job can
+            be started.
+        scheduler_args : dict, optional
+            Additional arguments for the scheduler.
+
+        Returns
+        -------
+        int
+            Job ID
+        """
         if scheduler_args is None:
             scheduler_args = dict()
         else:
             scheduler_args = dict(scheduler_args)
-        scheduler_args['idfile'] = self.idfile
+        scheduler_args.update({
+            'idfile': self.idfile,
+            'output_file': output_filename,
+            'depends_on': depends_on,
+            'name': name,
+        })
         subprocess.check_call(
             ['sqsub'] + self.build_args(**scheduler_args) + args)
         with open(self.idfile, 'r') as f:

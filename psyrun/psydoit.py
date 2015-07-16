@@ -238,16 +238,12 @@ task = TaskDef({taskpath!r})
             path=sys.path, taskdir=os.path.dirname(self.task.path),
             taskpath=self.task.path, code=code)
         codefile = os.path.join(self.splitter.workdir, name + '.py')
-        scheduler_args = dict(self.task.scheduler_args)
-        scheduler_args.update({
-            'output_file': os.path.join(self.splitter.workdir, name + '.log'),
-            'depends_on': depends_on,
-            'name': name
-        })
+        output_filename = os.path.join(self.splitter.workdir, name + '.log')
         with open(codefile, 'w') as f:
             f.write(code)
         return {'id': self.task.scheduler.submit(
-            [self.task.python, codefile], scheduler_args)}
+            [self.task.python, codefile], output_filename, name, depends_on,
+            self.task.scheduler_args)}
 
     def create_subtasks(self):
         """Yields all the required subtasks."""
