@@ -258,7 +258,7 @@ task = TaskDef({taskpath!r})
 
     def create_split_subtask(self):
         code = '''
-from psyrun.split import Splitter
+from psyrun.processing import Splitter
 Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
         '''.format(
             workdir=self.splitter.workdir, max_splits=self.task.max_splits,
@@ -303,7 +303,7 @@ Worker(task.mapper, **task.mapper_kwargs).start(
         else:
             result_file = os.path.join(self.splitter.workdir, 'result.h5')
         code = '''
-from psyrun.split import Splitter
+from psyrun.processing import Splitter
 Splitter.merge({outdir!r}, {filename!r})
         '''.format(outdir=self.splitter.outdir, filename=result_file)
 
