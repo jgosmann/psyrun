@@ -1,8 +1,12 @@
 """Job scheduler."""
 
+from collections import namedtuple
 import os
 import os.path
 import subprocess
+
+
+JobStatus = namedtuple('JobStatus', ['id', 'status', 'name'])
 
 
 class Scheduler(object):
@@ -29,8 +33,7 @@ class Scheduler(object):
 
         Returns
         -------
-        int
-            Job ID
+        Job ID
         """
         raise NotImplementedError()
 
@@ -39,7 +42,7 @@ class Scheduler(object):
 
         Parameters
         ----------
-        jobid : int
+        jobid
             Job to kill.
         """
         raise NotImplementedError()
@@ -49,12 +52,29 @@ class Scheduler(object):
 
         Parameters
         ----------
-        jobid : int
+        jobid
             Job to request status of.
 
         Returns
         -------
-        TODO
+        namedtuple
+            Returns a tuple with `(id, status, name)` wherein status can be
+            - `Q` for a queued job
+            - `*Q` for a queued job waiting on another job to finish
+            - `Z` for a sleeping job
+            - `D` for a completed job
+            If no status data is available for the job ID, ``None`` will be
+            returned.
+        """
+        raise NotImplementedError()
+
+    def get_jobs(self):
+        """Get all queued, running, and recently finished jobs.
+
+        Returns
+        -------
+        list
+            Job IDs
         """
         raise NotImplementedError()
 
@@ -96,6 +116,10 @@ class ImmediateRun(Scheduler):
     def get_status(self, jobid):
         """Has no effect."""
         pass
+
+    def get_jobs(self):
+        """Returns an empty list."""
+        return []
 
 
 class Sqsub(Scheduler):
@@ -196,7 +220,7 @@ class Sqsub(Scheduler):
         """
         subprocess.check_call(['sqkill', jobid])
 
-    def get_status(self, jobid):
+    def get_status(self, jobid=None):
         """Get the status of a job.
 
         Parameters
@@ -206,14 +230,39 @@ class Sqsub(Scheduler):
 
         Returns
         -------
-        TODO
+        namedtuple or None
+            Returns a tuple with `(id, status, name)` wherein status can be
+            - `Q` for a queued job
+            - `*Q` for a queued job waiting on another job to finish
+            - `Z` for a sleeping job
+            - `D` for a completed job
+            If no status data is available for the job ID, ``None`` will be
+            returned.
         """
         p = subprocess.check_call(['sqjobs', jobid], stdout=subprocess.PIPE)
         line = p.stdout.readline()
         while line != '':
             cols = line.split()
             if cols[0] == jobid:
-                return cols[3]
+                if cols[2] == 'C':
+                    cols[2] = 'D'
+                return JobStatus(cols[3])
             line = p.stdout.readline()
-        # TODO parse output
         return None
+
+    def get_jobs(self):
+        """Get all queued, running, and recently finished jobs.
+
+        Returns
+        -------
+        list of int
+            Job IDs
+        """
+        jobs = []
+        p = subprocess.check_call(['sqjobs'], stdout=subprocess.PIPE)
+        line = p.stdout.readline()
+        while line != '':
+            cols = line.split(maxsplit=1)
+            jobs.append(int(cols[0]))
+            line = p.stdout.readline()
+        return jobs

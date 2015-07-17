@@ -1,3 +1,4 @@
+import itertools
 import os
 import os.path
 import re
@@ -50,6 +51,9 @@ def _load_pyfile(filename):
 import sys
 sys.path = {path!r}
 sys.path.insert(0, {taskdir!r})
+
+import os
+os.chdir({taskdir!r})
 '''.format(path=sys.path, taskdir=os.path.dirname(filename))
     with open(filename, 'r') as f:
         source += f.read()
@@ -154,6 +158,7 @@ class PackageLoader(TaskLoader):
         Directory to load files from.
     """
     def __init__(self, taskdir):
+        super(PackageLoader, self).__init__()
         self.taskdir = taskdir
         conffile = os.path.join(self.taskdir, 'psyconf.py')
         if os.path.exists(conffile):
@@ -178,13 +183,209 @@ class PackageLoader(TaskLoader):
         group_task.has_subtask = True
 
         creator = DistributeSubtaskCreator(task)
-        for st in creator.create_subtasks():
-            st.is_subtask = True
-            st.file_dep.update(
-                os.path.join(self.taskdir, f) for f in task.file_dep)
-            group_task.task_dep.append(st.name)
-            yield st
-        yield group_task
+        return creator.create_subtasks()
+
+
+class Job(object):
+    def __init__(self, name, submit_fn, code, dependencies, targets):
+        self.name = name
+        self.submit_fn = submit_fn
+        self.code = code
+        self.dependencies = dependencies
+        self.targets = targets
+
+
+class JobChain(object):
+    def __init__(self, name, jobs):
+        self.name = name
+        self.jobs = jobs
+
+    @property
+    def dependencies(self):
+        return self.jobs[0].dependencies
+
+    @property
+    def targets(self):
+        return self.jobs[-1].targets
+
+
+class JobGroup(object):
+    def __init__(self, name, jobs):
+        self.name = name
+        self.jobs = jobs
+
+    @property
+    def dependencies(self):
+        return itertools.chain(j.dependencies for j in self.jobs)
+
+    @property
+    def targets(self):
+        return itertools.chain.from_iterable(j.targets for j in self.jobs)
+
+
+class JobTreeVisitor(object):
+    def __init__(self):
+        self._dispatcher = {
+            Job: self.visit_job,
+            JobChain: self.visit_chain,
+            JobGroup: self.visit_group
+        }
+
+    def visit_job(self, job):
+        raise NotImplementedError()
+
+    def visit_chain(self, chain):
+        raise NotImplementedError()
+
+    def visit_group(self, group):
+        raise NotImplementedError()
+
+    def visit(self, job):
+        return self._dispatcher[job.__class__](job)
+
+
+class ToDoitTask(JobTreeVisitor):
+    def __init__(self, names, uptodate):
+        super(ToDoitTask, self).__init__()
+        self.names = names
+        self.uptodate = uptodate
+        self.task_dep = []
+        self.getargs = {}
+
+    def visit_job(self, job):
+        yield dict_to_task({
+            'name': self.names[job],
+            'uptodate': [lambda: self.uptodate[job]],
+            'task_dep': self.task_dep,
+            'getargs': self.getargs,
+            'actions': [(job.submit_fn, [job.code, self.names[job]])],
+        })
+
+    def visit_group(self, group):
+        subtasks = itertools.chain.from_iterable(
+            self.visit(job) for job in group.jobs)
+
+        task_dict = {
+            'name': self.names[group],
+            'uptodate': [lambda: self.uptodate[group]],
+            'task_dep': [self.names[job] for job in group.jobs],
+            'actions': [],
+        }
+
+        task = dict_to_task(task_dict)
+        task.has_subtask = True
+        yield task
+        for task in subtasks:
+            task.is_subtask = True
+            yield task
+
+    def visit_chain(self, chain):
+        subtasks = []
+        old_task_dep = self.task_dep
+        old_getargs = self.getargs
+        for job in chain.jobs:
+            subtasks.extend(self.visit(job))
+            self.task_dep = old_task_dep + [self.names[job]]
+            self.getargs = {'depends_on': (self.names[job], 'id')}
+        self.task_dep = old_task_dep
+        self.getargs = old_getargs
+
+        task_dict = {
+            'name': self.names[chain],
+            'uptodate': [lambda: self.uptodate[chain]],
+            'task_dep': [self.names[job] for job in chain.jobs],
+            'actions': [],
+        }
+
+        task = dict_to_task(task_dict)
+        task.has_subtask = True
+        yield task
+        for task in subtasks:
+            task.is_subtask = True
+            yield task
+
+
+class Fullname(JobTreeVisitor):
+    def __init__(self, jobtree):
+        super(Fullname, self).__init__()
+        self.prefix = ''
+        self.names = {}
+        self.visit(jobtree)
+
+    def visit_job(self, job):
+        self.names[job] = self.prefix + job.name
+
+    def visit_chain(self, chain):
+        self.visit_group(chain)
+
+    def visit_group(self, group):
+        self.names[group] = self.prefix + group.name
+        old_prefix = self.prefix
+        self.prefix += group.name + ':'
+        for job in group.jobs:
+            self.visit(job)
+        self.prefix = old_prefix
+
+
+class Uptodate(JobTreeVisitor):
+    def __init__(self, jobtree, names, scheduler):
+        super(Uptodate, self).__init__()
+        self.names = names
+        self.scheduler = scheduler
+        self.status = {}
+        self.clamp = None
+        self.visit(jobtree)
+
+    def visit_job(self, job):
+        if self.is_job_queued(job):
+            return True
+        if self.clamp is None:
+            tref = self._get_tref(job.dependencies)
+            self.status[job] = self.files_uptodate(tref, job.targets)
+        else:
+            self.status[job] = self.clamp
+        return self.status[job]
+
+    def visit_chain(self, chain):
+        if self.clamp is None:
+            tref = self._get_tref(chain.jobs[0].dependencies)
+            self.status[chain] = True
+            i = len(chain.jobs)
+            while i > 0:
+                i -= 1
+                targets = chain.jobs[i].targets
+                if self.clamp is None or self.clamp == False:
+                    self.clamp = self.files_uptodate(tref, targets)
+                self.status[chain] = self.status[chain] and self.clamp
+                self.visit(chain.jobs[i])
+            self.clamp = None
+        else:
+            for job in chain.jobs:
+                self.visit(job)
+            self.status[chain] = self.clamp
+        return self.status[chain]
+
+    def visit_group(self, group):
+        self.status[group] = all(self.visit(j) for j in group.jobs)
+        return self.status[group]
+
+    def is_job_queued(self, job):
+        job_names = [
+            self.scheduler.get_status(j)[2] for j in self.scheduler.get_jobs()]
+        return self.names[job] in job_names
+
+    def files_uptodate(self, tref, targets):
+        return all(self._is_newer_than_tref(target, tref) for target in targets)
+
+    def _get_tref(self, dependencies):
+        tref = 0
+        deps = [d for d in dependencies if os.path.exists(d)]
+        if len(deps) > 0:
+            tref = max(os.stat(d).st_mtime for d in deps)
+        return tref
+
+    def _is_newer_than_tref(self, filename, tref):
+        return os.path.exists(filename) and os.stat(filename).st_mtime >= tref
 
 
 class DistributeSubtaskCreator(object):
@@ -201,6 +402,13 @@ class DistributeSubtaskCreator(object):
             os.path.join(task.workdir, task.name), task.pspace,
             task.max_splits, task.min_items)
         self.task = task
+
+    @property
+    def result_file(self):
+        if self.task.result_file:
+            return self.task.result_file
+        else:
+            return os.path.join(self.splitter.workdir, 'result.h5')
 
     def _submit(self, code, name, depends_on=None):
         """Submits some code to execute to the task scheduler.
@@ -254,33 +462,30 @@ task = TaskDef({taskpath!r})
             self.task.scheduler_args)}
 
     def create_subtasks(self):
-        """Yields all the required subtasks."""
-        yield self.create_split_subtask()
-        for st in self.create_process_subtasks():
-            yield st
-        yield self.create_merge_subtask()
+        job = self.create_job()
+        names = Fullname(job).names
+        return ToDoitTask(names, Uptodate(
+            job, names, self.task.scheduler).status).visit(job)
 
-    def create_split_subtask(self):
+    def create_job(self):
+        split = self.create_split_job()
+        process = self.create_process_job()
+        merge = self.create_merge_job()
+        return JobChain(self.task.name, [split, process, merge])
+
+    def create_split_job(self):
         code = '''
 from psyrun.processing import Splitter
 Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
         '''.format(
             workdir=self.splitter.workdir, max_splits=self.task.max_splits,
             min_items=self.task.min_items)
+        return Job(
+            'split', self._submit, code, [self.task.path] + self.task.file_dep,
+            [f for f, _ in self.splitter.iter_in_out_files()])
 
-        name = self.task.name + ':split'
-        return dict_to_task({
-            'name': name,
-            'file_dep': [self.task.path],
-            'actions': [(self._submit, [code, name])],
-        })
-
-    def create_process_subtasks(self):
-        group_task = dict_to_task({
-            'name': self.task.name + ':process',
-            'actions': None
-        })
-        group_task.has_subtask = True
+    def create_process_job(self):
+        jobs = []
         for i, (infile, outfile) in enumerate(
                 self.splitter.iter_in_out_files()):
             code = '''
@@ -288,38 +493,20 @@ from psyrun.processing import Worker
 Worker(task.mapper, **task.mapper_kwargs).start(
     task.execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
+            jobs.append(Job(str(i), self._submit, code, [infile], [outfile]))
 
-            name = '{0}:process:{1}'.format(self.task.name, i)
-            t = dict_to_task({
-                'name': name,
-                'task_dep': [self.task.name + ':split'],
-                'getargs': {'depends_on': (self.task.name + ':split', 'id')},
-                'actions': [(self._submit, [code, name])],
-            })
-            t.is_subtask = True
-            group_task.task_dep.append(t.name)
-            yield t
-        yield group_task
+        group = JobGroup('process', jobs)
+        return group
 
-    def create_merge_subtask(self):
-        if self.task.result_file:
-            result_file = self.task.result_file
-        else:
-            result_file = os.path.join(self.splitter.workdir, 'result.h5')
+    def create_merge_job(self):
         code = '''
 from psyrun.processing import Splitter
 Splitter.merge({outdir!r}, {filename!r}, append=False)
-        '''.format(outdir=self.splitter.outdir, filename=result_file)
-
-        name = self.task.name + ':merge'
-        file_deps = [f for _, f in self.splitter.iter_in_out_files()]
-        return dict_to_task({
-            'name': name,
-            'task_dep': ['{0}:process:{1}'.format(self.task.name, i)
-                         for i in range(len(file_deps))],
-            'getargs': {'depends_on': (self.task.name + ':process', 'id')},
-            'actions': [(self._submit, [code, name])],
-            })
+        '''.format(outdir=self.splitter.outdir, filename=self.result_file)
+        return Job(
+            'merge', self._submit, code,
+            [f for _, f in self.splitter.iter_in_out_files()],
+            [self.result_file])
 
 
 def psydoit(taskdir, argv=sys.argv[1:]):
