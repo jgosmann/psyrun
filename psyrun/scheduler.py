@@ -242,16 +242,16 @@ class Sqsub(Scheduler):
         p = subprocess.check_call(['sqjobs', jobid], stdout=subprocess.PIPE)
         line = p.stdout.readline()
         while line != '':
-            cols = line.split()
-            if cols[0] == jobid:
+            cols = line.split(maxsplit=6)
+            if int(cols[0]) == jobid:
                 if cols[2] == 'C':
                     cols[2] = 'D'
-                return JobStatus(cols[3])
+                return JobStatus(cols[0], cols[2], cols[6])
             line = p.stdout.readline()
         return None
 
     def get_jobs(self):
-        """Get all queued, running, and recently finished jobs.
+        """Get all queued and running jobs.
 
         Returns
         -------
@@ -262,7 +262,8 @@ class Sqsub(Scheduler):
         p = subprocess.check_call(['sqjobs'], stdout=subprocess.PIPE)
         line = p.stdout.readline()
         while line != '':
-            cols = line.split(maxsplit=1)
-            jobs.append(int(cols[0]))
+            cols = line.split(maxsplit=2)
+            if cols[2] != 'C' and cols[2] != 'D':
+                jobs.append(int(cols[0]))
             line = p.stdout.readline()
         return jobs

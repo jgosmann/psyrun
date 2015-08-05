@@ -10,24 +10,47 @@ class MockScheduler(Scheduler):
         self.datafile = datafile
 
     @property
+    def next_id(self):
+        if os.path.exists(self.datafile):
+            with open(self.datafile, 'rb') as f:
+                return pickle.load(f)['next_id']
+        else:
+            return 0
+
+    @next_id.setter
+    def next_id(self, value):
+        self._serialize(next_id=value)
+
+    @property
     def joblist(self):
         if os.path.exists(self.datafile):
             with open(self.datafile, 'rb') as f:
-                return pickle.load(f)
+                return tuple(pickle.load(f)['joblist'])
         else:
             return tuple()
 
     @joblist.setter
     def joblist(self, value):
+        self._serialize(joblist=value)
+
+    def _serialize(self, next_id=None, joblist=None):
+        if next_id is None:
+            next_id = self.next_id
+        if joblist is None:
+            joblist = self.joblist
+
         with open(self.datafile, 'wb') as f:
-            pickle.dump(tuple(value), f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(
+                {'next_id': next_id, 'joblist': joblist},
+                f, pickle.HIGHEST_PROTOCOL)
 
     def submit(
             self, args, output_filename, name=None, depends_on=None,
             scheduler_args=None):
         if depends_on is None:
             depends_on = []
-        jobid = len(self.joblist)
+        jobid = self.next_id
+        self.next_id += 1
         self.joblist = self.joblist + ({
             'id': jobid,
             'args': args,
@@ -40,7 +63,10 @@ class MockScheduler(Scheduler):
         return jobid
 
     def kill(self, jobid):
+        print 'k', jobid
+        print [job['id'] for job in self.joblist]
         self.joblist = [job for job in self.joblist if job['id'] != jobid]
+        print [job['id'] for job in self.joblist]
 
     def get_status(self, jobid):
         for job in self.joblist:

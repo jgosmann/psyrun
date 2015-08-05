@@ -337,11 +337,12 @@ class Uptodate(JobTreeVisitor):
         self.visit(jobtree)
 
     def visit_job(self, job):
-        if self.is_job_queued(job):
-            return True
         if self.clamp is None:
-            tref = self._get_tref(job.dependencies)
-            self.status[job] = self.files_uptodate(tref, job.targets)
+            if self.is_job_queued(job):
+                self.status[job] = True
+            else:
+                tref = self._get_tref(job.dependencies)
+                self.status[job] = self.files_uptodate(tref, job.targets)
         else:
             self.status[job] = self.clamp
         return self.status[job]
@@ -371,7 +372,8 @@ class Uptodate(JobTreeVisitor):
 
     def is_job_queued(self, job):
         job_names = [
-            self.scheduler.get_status(j)[2] for j in self.scheduler.get_jobs()]
+            self.scheduler.get_status(j).name
+            for j in self.scheduler.get_jobs()]
         return self.names[job] in job_names
 
     def files_uptodate(self, tref, targets):
@@ -457,6 +459,11 @@ task = TaskDef({taskpath!r})
         output_filename = os.path.join(self.splitter.workdir, name + '.log')
         with open(codefile, 'w') as f:
             f.write(code)
+
+        for job in self.task.scheduler.get_jobs():
+            if name == self.task.scheduler.get_status(job).name:
+                self.task.scheduler.kill(job)
+
         return {'id': self.task.scheduler.submit(
             [self.task.python, codefile], output_filename, name, depends_on,
             self.task.scheduler_args)}
