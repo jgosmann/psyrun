@@ -63,10 +63,7 @@ class MockScheduler(Scheduler):
         return jobid
 
     def kill(self, jobid):
-        print 'k', jobid
-        print [job['id'] for job in self.joblist]
         self.joblist = [job for job in self.joblist if job['id'] != jobid]
-        print [job['id'] for job in self.joblist]
 
     def get_status(self, jobid):
         for job in self.joblist:
