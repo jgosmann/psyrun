@@ -218,7 +218,7 @@ class Sqsub(Scheduler):
         jobid : int
             Job to kill.
         """
-        subprocess.check_call(['sqkill', jobid])
+        subprocess.check_call(['sqkill', str(jobid)])
 
     def get_status(self, jobid=None):
         """Get the status of a job.
@@ -239,15 +239,13 @@ class Sqsub(Scheduler):
             If no status data is available for the job ID, ``None`` will be
             returned.
         """
-        p = subprocess.check_call(['sqjobs', jobid], stdout=subprocess.PIPE)
-        line = p.stdout.readline()
-        while line != '':
-            cols = line.split(maxsplit=6)
+        stdout = subprocess.check_output(['sqjobs', str(jobid)])
+        for line in stdout.split(os.linesep)[2:]:
+            cols = line.split(None, 6)
             if int(cols[0]) == jobid:
                 if cols[2] == 'C':
                     cols[2] = 'D'
                 return JobStatus(cols[0], cols[2], cols[6])
-            line = p.stdout.readline()
         return None
 
     def get_jobs(self):
@@ -259,11 +257,9 @@ class Sqsub(Scheduler):
             Job IDs
         """
         jobs = []
-        p = subprocess.check_call(['sqjobs'], stdout=subprocess.PIPE)
-        line = p.stdout.readline()
-        while line != '':
-            cols = line.split(maxsplit=2)
-            if cols[2] != 'C' and cols[2] != 'D':
+        stdout = subprocess.check_output(['sqjobs'])
+        for line in stdout.split(os.linesep)[2:]:
+            cols = line.split(None, 3)
+            if len(cols) > 2 and cols[2] in ['Q', '*Q', 'Z']:
                 jobs.append(int(cols[0]))
-            line = p.stdout.readline()
         return jobs
