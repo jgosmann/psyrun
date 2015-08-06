@@ -74,7 +74,7 @@ class MockScheduler(Scheduler):
     def consume(self):
         for job in self.joblist:
             with open(job['output_filename'], 'a') as f:
-                subprocess.call(
+                subprocess.check_call(
                     job['args'], stdout=f, stderr=subprocess.STDOUT)
         self.joblist = []
 

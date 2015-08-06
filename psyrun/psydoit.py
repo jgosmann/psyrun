@@ -484,8 +484,10 @@ Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
         '''.format(
             workdir=self.splitter.workdir, max_splits=self.task.max_splits,
             min_items=self.task.min_items)
+        file_dep = [os.path.join(os.path.dirname(self.task.path), f)
+                    for f in self.task.file_dep]
         return Job(
-            'split', self._submit, code, [self.task.path] + self.task.file_dep,
+            'split', self._submit, code, [self.task.path] + file_dep,
             [f for f, _ in self.splitter.iter_in_out_files()])
 
     def create_process_job(self):

@@ -14,13 +14,41 @@ from psyrun.tests.mockscheduler import MockScheduler
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
 
 
+class TaskEnv(object):
+    def __init__(self, tmpdir):
+        self.rootdir = str(tmpdir)
+        self.taskdir = os.path.join(str(tmpdir), 'tasks')
+        self.workdir = os.path.join(str(tmpdir), 'work')
+        self.dbfile = os.path.join(str(tmpdir), 'doit.db')
+
+        shutil.copytree(TASKDIR, self.taskdir)
+        with open(os.path.join(self.taskdir, 'psyconf.py'), 'w') as f:
+            f.write('workdir = {0!r}'.format(self.workdir))
+
+
+@pytest.fixture
+def taskenv(tmpdir, request):
+    env = TaskEnv(tmpdir)
+    cwd = os.getcwd()
+
+    def fin():
+        os.chdir(cwd)
+
+    request.addfinalizer(fin)
+    os.chdir(str(env.rootdir))
+    return env
+
+
 @pytest.fixture
 def scheduler(taskenv, request):
-    jobfile = os.path.join(taskenv.taskdir, 'jobfile')
+    jobfile = os.path.join(taskenv.rootdir, 'jobfile')
     mock = MockScheduler(jobfile)
 
     def fin():
-        os.remove(jobfile)
+        try:
+            os.remove(jobfile)
+        except:
+            pass
 
     request.addfinalizer(fin)
     return mock
@@ -56,22 +84,6 @@ def test_load_config_from_file(tmpdir):
         f.write('python = "env python"')
     conf = Config.load_from_file(conffile)
     assert conf.python == 'env python'
-
-
-class TaskEnv(object):
-    def __init__(self, tmpdir):
-        self.taskdir = os.path.join(str(tmpdir), 'tasks')
-        self.workdir = os.path.join(str(tmpdir), 'work')
-        self.dbfile = os.path.join(str(tmpdir), 'doit.db')
-
-        shutil.copytree(TASKDIR, self.taskdir)
-        with open(os.path.join(self.taskdir, 'psyconf.py'), 'w') as f:
-            f.write('workdir = {0!r}'.format(self.workdir))
-
-
-@pytest.fixture
-def taskenv(tmpdir):
-    return TaskEnv(tmpdir)
 
 
 def test_psydoit(taskenv):
