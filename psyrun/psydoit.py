@@ -451,8 +451,9 @@ from psyrun.psydoit import TaskDef
 task = TaskDef({taskpath!r})
 {code}
         '''.format(
-            path=sys.path, taskdir=os.path.dirname(self.task.path),
-            taskpath=os.path.basename(self.task.path), code=code)
+            path=sys.path,
+            taskdir=os.path.abspath(os.path.dirname(self.task.path)),
+            taskpath=os.path.abspath(self.task.path), code=code)
         codefile = os.path.join(self.splitter.workdir, name + '.py')
         output_filename = os.path.join(self.splitter.workdir, name + '.log')
         with open(codefile, 'w') as f:
