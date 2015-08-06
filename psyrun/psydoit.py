@@ -51,10 +51,7 @@ def _load_pyfile(filename):
 import sys
 sys.path = {path!r}
 sys.path.insert(0, {taskdir!r})
-
-import os
-os.chdir({taskdir!r})
-'''.format(path=sys.path, taskdir=os.path.dirname(filename))
+'''.format(path=sys.path, taskdir=os.path.abspath(os.path.dirname(filename)))
     with open(filename, 'r') as f:
         source += f.read()
     code = compile(source, filename, 'exec')
@@ -454,7 +451,7 @@ task = TaskDef({taskpath!r})
 {code}
         '''.format(
             path=sys.path, taskdir=os.path.dirname(self.task.path),
-            taskpath=self.task.path, code=code)
+            taskpath=os.path.basename(self.task.path), code=code)
         codefile = os.path.join(self.splitter.workdir, name + '.py')
         output_filename = os.path.join(self.splitter.workdir, name + '.log')
         with open(codefile, 'w') as f:
