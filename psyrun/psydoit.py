@@ -364,7 +364,8 @@ class Uptodate(JobTreeVisitor):
         return self.status[chain]
 
     def visit_group(self, group):
-        self.status[group] = all(self.visit(j) for j in group.jobs)
+        subtask_status = [self.visit(j) for j in group.jobs]
+        self.status[group] = all(subtask_status)
         return self.status[group]
 
     def is_job_queued(self, job):
