@@ -376,11 +376,10 @@ class Uptodate(JobTreeVisitor):
         return self.status[group]
 
     def is_job_queued(self, job):
-        for j in self.scheduler.get_jobs():
-            status = self.scheduler.get_status(j)
-            if status.name == self.names[job] and 'Q' in status.status:
-                return True
-        return False
+        job_names = [
+            self.scheduler.get_status(j).name
+            for j in self.scheduler.get_jobs()]
+        return self.names[job] in job_names
 
     def files_uptodate(self, tref, targets):
         return all(self._is_newer_than_tref(target, tref) for target in targets)

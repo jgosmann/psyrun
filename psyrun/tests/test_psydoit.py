@@ -241,22 +241,6 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
     assert 'merge' in scheduler.joblist[5]['name']
 
 
-def test_psydoit_kills_outdated_jobs(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    old_jobs = list(scheduler.joblist)
-    scheduler.mark_running()
-    time.sleep(1)
-    t = time.time()
-    os.utime(
-        os.path.join(taskenv.taskdir, 'task_mocked_scheduler.py'),
-        (t, t))
-
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, '-v', '2', 'mocked_scheduler'])
-    assert len(scheduler.joblist) == len(old_jobs)
-    assert all(x['id'] != y['id'] for x, y in zip(scheduler.joblist, old_jobs)
-               if 'split' not in x['name'])
-
-
 def test_multiple_splits(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square2'])
     result = load_dict_h5(os.path.join(taskenv.workdir, 'square2', 'result.h5'))
