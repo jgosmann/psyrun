@@ -347,15 +347,23 @@ class Uptodate(JobTreeVisitor):
     def visit_chain(self, chain):
         if self.clamp is None:
             tref = self._get_tref(chain.jobs[0].dependencies)
-            self.status[chain] = True
-            i = len(chain.jobs)
-            while i > 0:
-                i -= 1
-                targets = chain.jobs[i].targets
-                if self.clamp is None or self.clamp == False:
-                    self.clamp = self.files_uptodate(tref, targets)
-                self.status[chain] = self.status[chain] and self.clamp
-                self.visit(chain.jobs[i])
+
+            last_uptodate = -1
+            for i, job in enumerate(reversed(chain.jobs)):
+                if self.files_uptodate(tref, job.targets):
+                    last_uptodate = len(chain.jobs) - i - 1
+                    break
+
+            for i, job in enumerate(chain.jobs):
+                if i <= last_uptodate:
+                    self.clamp = True
+                elif i == last_uptodate + 1:
+                    self.clamp = None
+                else:
+                    self.clamp = False
+                self.visit(job)
+
+            self.status[chain] = last_uptodate + 1 == len(chain.jobs)
             self.clamp = None
         else:
             for job in chain.jobs:

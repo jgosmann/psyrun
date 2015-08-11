@@ -176,10 +176,11 @@ def test_psydoit_resubmits_jobs_if_necessary(taskenv, scheduler):
     shutil.rmtree(taskenv.workdir)
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    assert len(scheduler.joblist) == 3
+    assert len(scheduler.joblist) == 6
     assert 'split' in scheduler.joblist[0]['name']
-    assert 'process:0' in scheduler.joblist[1]['name']
-    assert 'merge' in scheduler.joblist[2]['name']
+    for i in range(4):
+        assert 'process:{0}'.format(i) in scheduler.joblist[i + 1]['name']
+    assert 'merge' in scheduler.joblist[5]['name']
 
 
 def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
@@ -190,12 +191,11 @@ def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
     os.utime(
         os.path.join(taskenv.taskdir, 'task_mocked_scheduler.py'),
         (t, t))
-    os.utime(
-        os.path.join(taskenv.workdir, 'mocked_scheduler', 'in', '0.h5'),
-        (t, t))
-    os.utime(
-        os.path.join(taskenv.workdir, 'mocked_scheduler', 'out', '0.h5'),
-        (t, t))
+    for i in range(4):
+        os.utime(os.path.join(
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.h5'), (t, t))
+        os.utime(os.path.join(
+            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.h5'), (t, t))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
@@ -211,14 +211,15 @@ def test_psydoit_resubmits_process_and_merge_if_outfile_is_outdated(
     os.utime(
         os.path.join(taskenv.taskdir, 'task_mocked_scheduler.py'),
         (t, t))
-    os.utime(
-        os.path.join(taskenv.workdir, 'mocked_scheduler', 'in', '0.h5'),
-        (t, t))
+    for i in range(4):
+        os.utime(os.path.join(
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.h5'), (t, t))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    assert len(scheduler.joblist) == 2
-    assert 'process:0' in scheduler.joblist[0]['name']
-    assert 'merge' in scheduler.joblist[1]['name']
+    assert len(scheduler.joblist) == 5
+    for i in range(4):
+        assert 'process:{0}'.format(i) in scheduler.joblist[i]['name']
+    assert 'merge' in scheduler.joblist[4]['name']
 
 
 def test_psydoit_resubmits_all_if_infile_is_outdated(
@@ -232,10 +233,11 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
         (t, t))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    assert len(scheduler.joblist) == 3
+    assert len(scheduler.joblist) == 6
     assert 'split' in scheduler.joblist[0]['name']
-    assert 'process:0' in scheduler.joblist[1]['name']
-    assert 'merge' in scheduler.joblist[2]['name']
+    for i in range(4):
+        assert 'process:{0}'.format(i) in scheduler.joblist[i + 1]['name']
+    assert 'merge' in scheduler.joblist[5]['name']
 
 
 def test_psydoit_kills_outdated_jobs(taskenv, scheduler):
@@ -249,7 +251,8 @@ def test_psydoit_kills_outdated_jobs(taskenv, scheduler):
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, '-v', '2', 'mocked_scheduler'])
     assert len(scheduler.joblist) == len(old_jobs)
-    assert all(x['id'] != y['id'] for x, y in zip(scheduler.joblist, old_jobs))
+    assert all(x['id'] != y['id'] for x, y in zip(scheduler.joblist, old_jobs)
+               if 'split' not in x['name'])
 
 
 def test_multiple_splits(taskenv):
