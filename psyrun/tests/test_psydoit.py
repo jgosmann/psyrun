@@ -114,9 +114,10 @@ def test_psydoit_file_dep(taskenv):
 
 def test_psydoit_does_not_resubmit_queued_jobs(taskenv, scheduler):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    init_job_number = len(scheduler.joblist)
+    expected = scheduler.joblist
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
-    assert init_job_number == len(scheduler.joblist)
+    assert len(expected) == len(scheduler.joblist)
+    assert all(x['id'] == y['id'] for x, y in zip(expected, scheduler.joblist))
 
 
 def test_psydoit_remerges_if_result_is_missing(taskenv, scheduler):
@@ -243,6 +244,7 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
 def test_psydoit_kills_outdated_jobs(taskenv, scheduler):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     old_jobs = list(scheduler.joblist)
+    scheduler.mark_running()
     time.sleep(1)
     t = time.time()
     os.utime(

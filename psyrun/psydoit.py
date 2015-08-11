@@ -334,12 +334,11 @@ class Uptodate(JobTreeVisitor):
         self.visit(jobtree)
 
     def visit_job(self, job):
-        if self.clamp is None:
-            if self.is_job_queued(job):
-                self.status[job] = True
-            else:
-                tref = self._get_tref(job.dependencies)
-                self.status[job] = self.files_uptodate(tref, job.targets)
+        if self.is_job_queued(job):
+            self.status[job] = True
+        elif self.clamp is None:
+            tref = self._get_tref(job.dependencies)
+            self.status[job] = self.files_uptodate(tref, job.targets)
         else:
             self.status[job] = self.clamp
         return self.status[job]
@@ -377,10 +376,11 @@ class Uptodate(JobTreeVisitor):
         return self.status[group]
 
     def is_job_queued(self, job):
-        job_names = [
-            self.scheduler.get_status(j).name
-            for j in self.scheduler.get_jobs()]
-        return self.names[job] in job_names
+        for j in self.scheduler.get_jobs():
+            status = self.scheduler.get_status(j)
+            if status.name == self.names[job] and 'Q' in status.status:
+                return True
+        return False
 
     def files_uptodate(self, tref, targets):
         return all(self._is_newer_than_tref(target, tref) for target in targets)

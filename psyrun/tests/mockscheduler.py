@@ -62,6 +62,13 @@ class MockScheduler(Scheduler):
         },)
         return jobid
 
+    def mark_running(self):
+        updated = []
+        for job in self.joblist:
+            job.update({'status': 'R'})
+            updated.append(job)
+        self.joblist = tuple(updated)
+
     def kill(self, jobid):
         self.joblist = [job for job in self.joblist if job['id'] != jobid]
 
