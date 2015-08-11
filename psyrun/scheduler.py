@@ -247,13 +247,18 @@ class Sqsub(Scheduler):
             If no status data is available for the job ID, ``None`` will be
             returned.
         """
-        stdout = subprocess.check_output(['sqjobs', str(jobid)])
-        for line in stdout.split(os.linesep)[2:]:
-            cols = line.split(None, 6)
-            if int(cols[0]) == jobid:
-                if cols[2] == 'C':
-                    cols[2] = 'D'
-                return JobStatus(cols[0], cols[2], cols[6])
+        try:
+            stdout = subprocess.check_output(
+                ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
+            for line in stdout.split(os.linesep)[2:]:
+                cols = line.split(None, 6)
+                if int(cols[0]) == jobid:
+                    if cols[2] == 'C':
+                        cols[2] = 'D'
+                    return JobStatus(cols[0], cols[2], cols[-1])
+        except subprocess.CalledProcessError as err:
+            if err.returncode != 1:  # 1 if none pending, running, or suspended
+                raise
         return None
 
     def get_jobs(self):
