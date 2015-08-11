@@ -199,6 +199,14 @@ class Sqsub(Scheduler):
             scheduler_args = dict()
         else:
             scheduler_args = dict(scheduler_args)
+
+        # Checking whether jobs depending on are completed before submitting
+        # the new job is a race condition, but I see no possibility to avoid
+        # it.
+        statii = [self.get_status(x) for x in depends_on]
+        depends_on = [x for x, s in zip(depends_on, statii)
+                      if s is not None and s.status != 'D']
+
         scheduler_args.update({
             'idfile': self.idfile,
             'output_file': output_filename,
