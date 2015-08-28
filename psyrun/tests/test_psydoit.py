@@ -165,7 +165,9 @@ def test_psydoit_does_not_resubmit_split_if_infiles_uptodate(
                 continue
             os.remove(os.path.join(dirpath, filename))
 
-    psydoit(taskenv.taskdir, ['list', '-s', '--all', '--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psydoit(taskenv.taskdir, [
+        'list', '-s', '--all', '--db-file', taskenv.dbfile,
+        'mocked_scheduler'])
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     for job in scheduler.joblist:
         assert 'split' not in job['name']
