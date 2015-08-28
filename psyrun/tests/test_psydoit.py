@@ -247,3 +247,7 @@ def test_multiple_splits(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square2'])
     result = load_dict_h5(os.path.join(taskenv.workdir, 'square2', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+def test_working_directory(taskenv):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, '-v', '2', 'workingdir'])

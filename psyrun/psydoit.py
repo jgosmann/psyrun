@@ -47,15 +47,11 @@ class TaskDef(object):
 
 
 def _load_pyfile(filename):
-    source = '''
-import sys
-sys.path = {path!r}
-sys.path.insert(0, {taskdir!r})
-'''.format(path=sys.path, taskdir=os.path.abspath(os.path.dirname(filename)))
+    source = ''
     with open(filename, 'r') as f:
         source += f.read()
     code = compile(source, filename, 'exec')
-    loaded = {}
+    loaded = {'__file__': filename}
     exec(code, loaded)
     return loaded
 
@@ -449,7 +445,8 @@ except:
 
 import sys
 sys.path = {path!r}
-sys.path.insert(0, {taskdir!r})
+if {taskdir!r} not in sys.path:
+    sys.path.insert(0, {taskdir!r})
 
 import os
 os.chdir({taskdir!r})
