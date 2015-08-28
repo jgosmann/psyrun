@@ -467,7 +467,8 @@ task = TaskDef({taskpath!r})
             f.write(code)
 
         for job in self.task.scheduler.get_jobs():
-            if name == self.task.scheduler.get_status(job).name:
+            status = self.task.scheduler.get_status(job)
+            if status is not None and name == status.name:
                 self.task.scheduler.kill(job)
 
         return {'id': self.task.scheduler.submit(

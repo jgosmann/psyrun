@@ -203,9 +203,10 @@ class Sqsub(Scheduler):
         # Checking whether jobs depending on are completed before submitting
         # the new job is a race condition, but I see no possibility to avoid
         # it.
-        statii = [self.get_status(x) for x in depends_on]
-        depends_on = [x for x, s in zip(depends_on, statii)
-                      if s is not None and s.status != 'D']
+        if depends_on is not None:
+            statii = [self.get_status(x) for x in depends_on]
+            depends_on = [x for x, s in zip(depends_on, statii)
+                          if s is not None and s.status != 'D']
 
         scheduler_args.update({
             'idfile': self.idfile,
@@ -252,7 +253,7 @@ class Sqsub(Scheduler):
                 ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
             for line in stdout.split(os.linesep)[2:]:
                 cols = line.split(None, 6)
-                if int(cols[0]) == jobid:
+                if len(cols) > 3 and int(cols[0]) == jobid:
                     if cols[2] == 'C':
                         cols[2] = 'D'
                     return JobStatus(cols[0], cols[2], cols[-1])
