@@ -444,11 +444,6 @@ try:
 except:
     pass
 
-import sys
-sys.path = {path!r}
-if {taskdir!r} not in sys.path:
-    sys.path.insert(0, {taskdir!r})
-
 import os
 os.chdir({taskdir!r})
 
