@@ -52,7 +52,7 @@ def _load_pyfile(filename):
         source += f.read()
     code = compile(source, filename, 'exec')
     loaded = {'__file__': filename}
-    exec(code, loaded)
+    exec(code, loaded)  # pylint: disable=exec-used
     return loaded
 
 
@@ -141,9 +141,9 @@ class Config(object):
 class PackageLoader(TaskLoader):
     """Loads doit tasks from Python files.
 
-    Filenames have to match the regex defined in :const:`.TaskDef.TASK_PATTERN`.
-    See :class:`.Config` for supported module level variables in the task
-    definition.
+    Filenames have to match the regex defined in
+    :const:`.TaskDef.TASK_PATTERN`.  See :class:`.Config` for supported module
+    level variables in the task definition.
 
     Parameters
     ----------
@@ -378,7 +378,8 @@ class Uptodate(JobTreeVisitor):
         return self.names[job] in job_names
 
     def files_uptodate(self, tref, targets):
-        return all(self._is_newer_than_tref(target, tref) for target in targets)
+        return all(
+            self._is_newer_than_tref(target, tref) for target in targets)
 
     def _get_tref(self, dependencies):
         tref = 0
