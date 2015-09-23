@@ -170,6 +170,7 @@ class Sqsub(Scheduler):
             os.makedirs(workdir)
         self.workdir = workdir
         self.idfile = os.path.join(workdir, 'idfile')
+        self._jobs = None
 
     def submit(
             self, args, output_filename, name=None, depends_on=None,
@@ -248,19 +249,23 @@ class Sqsub(Scheduler):
             If no status data is available for the job ID, ``None`` will be
             returned.
         """
-        try:
-            stdout = subprocess.check_output(
-                ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
-            for line in stdout.split(os.linesep)[2:]:
-                cols = line.split(None, 6)
-                if len(cols) > 3 and int(cols[0]) == jobid:
-                    if cols[2] == 'C':
-                        cols[2] = 'D'
-                    return JobStatus(cols[0], cols[2], cols[-1])
-        except subprocess.CalledProcessError as err:
-            if err.returncode != 1:  # 1 if none pending, running, or suspended
-                raise
-        return None
+        if self._jobs is None:
+            self.refresh_job_info()
+        elif jobid not in self._jobs:
+            try:
+                stdout = subprocess.check_output(
+                    ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
+                for line in stdout.split(os.linesep)[2:]:
+                    cols = line.split(None, 6)
+                    if len(cols) > 3 and int(cols[0]) == jobid:
+                        if cols[2] == 'C':
+                            cols[2] = 'D'
+                        self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
+            except subprocess.CalledProcessError as err:
+                # 1 if none pending, running, or suspended
+                if err.returncode != 1:
+                    raise
+        return self._jobs.get(jobid, None)
 
     def get_jobs(self):
         """Get all queued and running jobs.
@@ -270,10 +275,15 @@ class Sqsub(Scheduler):
         list of int
             Job IDs
         """
-        jobs = []
+        if self._jobs is None:
+            self.refresh_job_info()
+        return self._jobs.keys()
+
+    def refresh_job_info(self):
+        self._jobs = {}
         stdout = subprocess.check_output(['sqjobs'])
         for line in stdout.split(os.linesep)[2:]:
             cols = line.split(None, 3)
             if len(cols) > 2 and cols[2] in ['Q', '*Q', 'Z']:
-                jobs.append(int(cols[0]))
-        return jobs
+                jobid = int(cols[0])
+                self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
