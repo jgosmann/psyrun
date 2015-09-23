@@ -99,7 +99,7 @@ class Config(object):
         'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep']
 
     def __init__(self):
-        self.workdir = 'psywork'
+        self.workdir = os.path.abspath('psywork')
         self.result_file = None
         self.mapper = map_pspace
         self.mapper_kwargs = {}

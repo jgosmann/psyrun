@@ -92,6 +92,21 @@ def test_psydoit(taskenv):
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
+def test_psydoit_workdir_contents(taskenv):
+    workdir = os.path.join('psywork', 'square')
+    os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    assert os.path.exists(os.path.join(workdir, 'in', '0.h5'))
+    assert os.path.exists(os.path.join(workdir, 'out', '0.h5'))
+    assert os.path.exists(os.path.join(workdir, 'result.h5'))
+    assert os.path.exists(os.path.join(workdir, 'square:split.py'))
+    assert os.path.exists(os.path.join(workdir, 'square:process:0.py'))
+    assert os.path.exists(os.path.join(workdir, 'square:merge.py'))
+    assert os.path.exists(os.path.join(workdir, 'square:split.log'))
+    assert os.path.exists(os.path.join(workdir, 'square:process:0.log'))
+    assert os.path.exists(os.path.join(workdir, 'square:merge.log'))
+
+
 def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
