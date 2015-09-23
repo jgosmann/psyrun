@@ -8,7 +8,7 @@ import pytest
 from psyrun.io import load_dict_h5
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mapper import map_pspace
-from psyrun.tests.mockscheduler import MockScheduler
+from psyrun.mockscheduler import MockScheduler
 
 
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
