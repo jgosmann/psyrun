@@ -499,8 +499,9 @@ Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
                 self.splitter.iter_in_out_files()):
             code = '''
 from psyrun.processing import Worker
+execute = task.execute
 Worker(task.mapper, **task.mapper_kwargs).start(
-    task.execute, {infile!r}, {outfile!r})
+    execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
             jobs.append(Job(str(i), self._submit, code, [infile], [outfile]))
 
