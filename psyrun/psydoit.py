@@ -8,6 +8,7 @@ from doit.task import dict_to_task
 from doit.cmd_base import TaskLoader
 from doit.doit_cmd import DoitMain
 
+from psyrun.io import NpzStore
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
 from psyrun.mapper import map_pspace
@@ -72,7 +73,7 @@ class Config(object):
         Working directory to store task data in.
     result_file : str or None
         Path to save the results of the finished task at. If ``None``, this
-        defaults to ``'result.h5'`` in the `workdir`.
+        defaults to ``'result.<ext>'`` in the `workdir`.
     mapper : function
         Function to map the task's ``execute`` function onto the parameter
         space. Defaults to serial execution.
@@ -92,11 +93,14 @@ class Config(object):
         Minimum number of parameter sets to evaluate per job.
     file_dep : list of str
         Additional files the task depends on.
+    io : :class:`DictStore`
+        Input/output backend. Defaults to :class:`NpzStore`.
     """
 
     __slots__ = [
         'workdir', 'result_file', 'mapper', 'mapper_kwargs', 'scheduler',
-        'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep']
+        'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
+        'io']
 
     def __init__(self):
         self.workdir = os.path.abspath('psywork')
@@ -109,6 +113,7 @@ class Config(object):
         self.max_splits = 64
         self.min_items = 4
         self.file_dep = []
+        self.io = NpzStore()
 
     @classmethod
     def load_from_file(cls, filename):
@@ -404,7 +409,7 @@ class DistributeSubtaskCreator(object):
     def __init__(self, task):
         self.splitter = Splitter(
             os.path.join(task.workdir, task.name), task.pspace,
-            task.max_splits, task.min_items)
+            task.max_splits, task.min_items, io=task.io)
         self.task = task
 
     @property
@@ -412,7 +417,8 @@ class DistributeSubtaskCreator(object):
         if self.task.result_file:
             return self.task.result_file
         else:
-            return os.path.join(self.splitter.workdir, 'result.h5')
+            return os.path.join(
+                self.splitter.workdir, 'result' + self.splitter.io.ext)
 
     def _submit(self, code, name, depends_on=None):
         """Submits some code to execute to the task scheduler.
@@ -483,7 +489,9 @@ task = TaskDef({taskpath!r})
     def create_split_job(self):
         code = '''
 from psyrun.processing import Splitter
-Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
+Splitter(
+    {workdir!r}, task.pspace, {max_splits!r}, {min_items!r},
+    io=task.io).split()
         '''.format(
             workdir=self.splitter.workdir, max_splits=self.task.max_splits,
             min_items=self.task.min_items)
@@ -500,7 +508,7 @@ Splitter({workdir!r}, task.pspace, {max_splits!r}, {min_items!r}).split()
             code = '''
 from psyrun.processing import Worker
 execute = task.execute
-Worker(task.mapper, **task.mapper_kwargs).start(
+Worker(task.mapper, io=task.io, **task.mapper_kwargs).start(
     execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
             jobs.append(Job(str(i), self._submit, code, [infile], [outfile]))
@@ -511,7 +519,7 @@ Worker(task.mapper, **task.mapper_kwargs).start(
     def create_merge_job(self):
         code = '''
 from psyrun.processing import Splitter
-Splitter.merge({outdir!r}, {filename!r}, append=False)
+Splitter.merge({outdir!r}, {filename!r}, append=False, io=task.io)
         '''.format(outdir=self.splitter.outdir, filename=self.result_file)
         return Job(
             'merge', self._submit, code,

@@ -18,12 +18,20 @@ class DictStore(object):
 
 
 class NpzStore(DictStore):
+    ext = '.npz'
+
     def save(self, filename, data):
         np.savez(filename, **data)
 
     def load(self, filename):
-        with np.load(filename) as data:
-            return dict(data)
+        try:
+            with np.load(filename) as data:
+                return dict(data)
+        except IOError as err:
+            if 'as a pickle' in err.message:
+                return {}
+            else:
+                raise
 
     def append(self, filename, data):
         try:
@@ -56,6 +64,8 @@ class H5Store(DictStore):
     node : str, optional
         Node in the HDF5 file to store the data at.
     """
+
+    ext = '.h5'
 
     def __init__(self, node='/psyrun'):
         super(H5Store, self).__init__()

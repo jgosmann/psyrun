@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import H5Store
+from psyrun.io import NpzStore
 from psyrun.pspace import Param
 from psyrun.mapper import map_pspace, map_pspace_parallel
 from psyrun.processing import Splitter, Worker
@@ -36,21 +36,21 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            H5Store().save(outfile, H5Store().load(infile))
+            NpzStore().save(outfile, NpzStore().load(infile))
 
-        result_file = os.path.join(str(tmpdir), 'result.h5')
+        result_file = os.path.join(str(tmpdir), 'result.npz')
         Splitter.merge(splitter.outdir, result_file)
-        result = H5Store().load(result_file)
+        result = NpzStore().load(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))
 
 
 @pytest.mark.parametrize('mapper', [map_pspace, map_pspace_parallel])
 def test_worker(mapper, tmpdir):
-    infile = os.path.join(str(tmpdir), 'in.h5')
-    outfile = os.path.join(str(tmpdir), 'out.h5')
-    H5Store().save(infile, Param(a=range(7)).build())
+    infile = os.path.join(str(tmpdir), 'in.npz')
+    outfile = os.path.join(str(tmpdir), 'out.npz')
+    NpzStore().save(infile, Param(a=range(7)).build())
     worker = Worker(mapper)
     worker.start(square, infile, outfile)
-    result = H5Store().load(outfile)
+    result = NpzStore().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

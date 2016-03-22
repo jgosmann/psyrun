@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from psyrun.io import H5Store
+from psyrun.io import H5Store, NpzStore
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mapper import map_pspace
 from psyrun.mockscheduler import MockScheduler
@@ -88,8 +88,15 @@ def test_load_config_from_file(tmpdir):
 
 def test_psydoit(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    result = NpzStore().load(
+        os.path.join(taskenv.workdir, 'square', 'result.npz'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+def test_psydoit_h5_backend(taskenv):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_h5'])
     result = H5Store().load(
-        os.path.join(taskenv.workdir, 'square', 'result.h5'))
+        os.path.join(taskenv.workdir, 'square_h5', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
@@ -97,9 +104,9 @@ def test_psydoit_workdir_contents(taskenv):
     workdir = os.path.join('psywork', 'square')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
-    assert os.path.exists(os.path.join(workdir, 'in', '0.h5'))
-    assert os.path.exists(os.path.join(workdir, 'out', '0.h5'))
-    assert os.path.exists(os.path.join(workdir, 'result.h5'))
+    assert os.path.exists(os.path.join(workdir, 'in', '0.npz'))
+    assert os.path.exists(os.path.join(workdir, 'out', '0.npz'))
+    assert os.path.exists(os.path.join(workdir, 'result.npz'))
     assert os.path.exists(os.path.join(workdir, 'square:split.py'))
     assert os.path.exists(os.path.join(workdir, 'square:process:0.py'))
     assert os.path.exists(os.path.join(workdir, 'square:merge.py'))
@@ -112,8 +119,8 @@ def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
-    result = H5Store().load(os.path.join(
-        taskenv.workdir, 'file_dep', 'result.h5'))
+    result = NpzStore().load(os.path.join(
+        taskenv.workdir, 'file_dep', 'result.npz'))
     assert sorted(result['y']) == [4]
 
     # Ensure that modification time changes as some file systems only support
@@ -123,8 +130,8 @@ def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('3')
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
-    result = H5Store().load(os.path.join(
-        taskenv.workdir, 'file_dep', 'result.h5'))
+    result = NpzStore().load(os.path.join(
+        taskenv.workdir, 'file_dep', 'result.npz'))
     assert sorted(result['y']) == [8]
 
 
@@ -139,7 +146,7 @@ def test_psydoit_does_not_resubmit_queued_jobs(taskenv, scheduler):
 def test_psydoit_remerges_if_result_is_missing(taskenv, scheduler):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     scheduler.consume()
-    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.h5'))
+    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
@@ -151,7 +158,7 @@ def test_psydoit_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
     scheduler.consume()
     for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
-            if filename == 'result.h5':
+            if filename == 'result.npz':
                 continue
             os.remove(os.path.join(dirpath, filename))
 
@@ -162,8 +169,9 @@ def test_psydoit_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
 def test_psydoit_resubmits_for_missing_job_output(taskenv, scheduler):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     scheduler.consume()
-    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.h5'))
-    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'out', '0.h5'))
+    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
+    os.remove(os.path.join(
+        taskenv.workdir, 'mocked_scheduler', 'out', '0.npz'))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 2
@@ -212,9 +220,11 @@ def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.h5'), (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.npz'),
+            (t, t))
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.h5'), (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.npz'),
+            (t, t))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
@@ -232,7 +242,8 @@ def test_psydoit_resubmits_process_and_merge_if_outfile_is_outdated(
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.h5'), (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.npz'),
+            (t, t))
 
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 5
@@ -261,7 +272,8 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
 
 def test_multiple_splits(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square2'])
-    result = H5Store().load(os.path.join(taskenv.workdir, 'square2', 'result.h5'))
+    result = NpzStore().load(os.path.join(
+        taskenv.workdir, 'square2', 'result.npz'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
