@@ -3,6 +3,8 @@ import os
 import os.path
 import re
 import sys
+import traceback
+import warnings
 
 from doit.task import dict_to_task
 from doit.cmd_base import TaskLoader
@@ -169,8 +171,14 @@ class PackageLoader(TaskLoader):
         for filename in os.listdir(self.taskdir):
             root, ext = os.path.splitext(filename)
             if TaskDef.TASK_PATTERN.match(root) and ext == '.py':
-                task = TaskDef(os.path.join(self.taskdir, filename), self.conf)
-                task_list.extend(self.create_task(task))
+                path = os.path.join(self.taskdir, filename)
+                try:
+                    task = TaskDef(path, self.conf)
+                    task_list.extend(self.create_task(task))
+                except Exception:
+                    traceback.print_exc()
+                    warnings.warn("Task {path!r} could not be loaded.".format(
+                        path=path))
         return task_list, {}
 
     def create_task(self, task):
