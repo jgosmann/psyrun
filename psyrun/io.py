@@ -28,7 +28,7 @@ class NpzStore(DictStore):
             with np.load(filename) as data:
                 return dict(data)
         except IOError as err:
-            if 'as a pickle' in err.message:
+            if 'as a pickle' in str(err):
                 return {}
             else:
                 raise
