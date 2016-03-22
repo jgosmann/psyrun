@@ -3,7 +3,7 @@
 import os
 import os.path
 
-from psyrun.io import append_dict_h5, load_dict_h5, save_dict_h5
+from psyrun.io import H5Store
 from psyrun.pspace import dict_concat, Param
 
 
@@ -53,7 +53,7 @@ class Splitter(object):
             items_remaining -= split_size
             block = dict_concat(
                 [row for row in self._iter_n(param_iter, split_size)])
-            save_dict_h5(os.path.join(self.indir, filename), block)
+            H5Store().save(os.path.join(self.indir, filename), block)
 
     @classmethod
     def merge(cls, outdir, merged_filename, append=True):
@@ -70,12 +70,12 @@ class Splitter(object):
             will be overwritten with the merged data.
         """
         if not append:
-            save_dict_h5(merged_filename, {})
+            H5Store().save(merged_filename, {})
         for filename in os.listdir(outdir):
             if os.path.splitext(filename)[1] != '.h5':
                 continue
             infile = os.path.join(outdir, filename)
-            append_dict_h5(merged_filename, load_dict_h5(infile))
+            H5Store().append(merged_filename, H5Store().load(infile))
 
     def iter_in_out_files(self):
         """Return generator returning tuples of corresponding input and output
@@ -130,6 +130,6 @@ class Worker(object):
         outfile : str
             Output filename for the results.
         """
-        pspace = Param(**load_dict_h5(infile))
+        pspace = Param(**H5Store().load(infile))
         data = self.mapper(fn, pspace, **self.mapper_kwargs)
-        save_dict_h5(outfile, data)
+        H5Store().save(outfile, data)

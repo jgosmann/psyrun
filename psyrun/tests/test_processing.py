@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import load_dict_h5, save_dict_h5
+from psyrun.io import H5Store
 from psyrun.pspace import Param
 from psyrun.mapper import map_pspace, map_pspace_parallel
 from psyrun.processing import Splitter, Worker
@@ -36,11 +36,11 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            save_dict_h5(outfile, load_dict_h5(infile))
+            H5Store().save(outfile, H5Store().load(infile))
 
         result_file = os.path.join(str(tmpdir), 'result.h5')
         Splitter.merge(splitter.outdir, result_file)
-        result = load_dict_h5(result_file)
+        result = H5Store().load(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))
 
 
@@ -48,9 +48,9 @@ class TestSplitter(object):
 def test_worker(mapper, tmpdir):
     infile = os.path.join(str(tmpdir), 'in.h5')
     outfile = os.path.join(str(tmpdir), 'out.h5')
-    save_dict_h5(infile, Param(a=range(7)).build())
+    H5Store().save(infile, Param(a=range(7)).build())
     worker = Worker(mapper)
     worker.start(square, infile, outfile)
-    result = load_dict_h5(outfile)
+    result = H5Store().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

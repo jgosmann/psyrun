@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from psyrun.io import load_dict_h5
+from psyrun.io import H5Store
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mapper import map_pspace
 from psyrun.mockscheduler import MockScheduler
@@ -88,7 +88,8 @@ def test_load_config_from_file(tmpdir):
 
 def test_psydoit(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
-    result = load_dict_h5(os.path.join(taskenv.workdir, 'square', 'result.h5'))
+    result = H5Store().load(
+        os.path.join(taskenv.workdir, 'square', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
@@ -111,7 +112,7 @@ def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
-    result = load_dict_h5(os.path.join(
+    result = H5Store().load(os.path.join(
         taskenv.workdir, 'file_dep', 'result.h5'))
     assert sorted(result['y']) == [4]
 
@@ -122,7 +123,7 @@ def test_psydoit_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('3')
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
-    result = load_dict_h5(os.path.join(
+    result = H5Store().load(os.path.join(
         taskenv.workdir, 'file_dep', 'result.h5'))
     assert sorted(result['y']) == [8]
 
@@ -260,7 +261,7 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
 
 def test_multiple_splits(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square2'])
-    result = load_dict_h5(os.path.join(taskenv.workdir, 'square2', 'result.h5'))
+    result = H5Store().load(os.path.join(taskenv.workdir, 'square2', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
