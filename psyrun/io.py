@@ -1,5 +1,7 @@
 """Function to read and write common psyrun data formats."""
 
+import errno
+
 import numpy as np
 import tables
 
@@ -13,6 +15,37 @@ class DictStore(object):
 
     def append(self, filename, data):
         raise NotImplementedError()
+
+
+class NpzStore(DictStore):
+    def save(self, filename, data):
+        np.savez(filename, **data)
+
+    def load(self, filename):
+        with np.load(filename) as data:
+            return dict(data)
+
+    def append(self, filename, data):
+        try:
+            loaded = self.load(filename)
+        except IOError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            loaded = {}
+
+        for k, v in data.items():
+            shape = _min_shape(np.asarray(x).shape for x in v)
+            try:
+                node = loaded[k]
+            except KeyError:
+                v = _match_shape(v, shape)
+                loaded[k] = v
+            else:
+                shape = _min_shape((shape, node.shape[1:]))
+                loaded[k] = _match_shape(loaded[k], shape)
+                v = _match_shape(v, shape)
+                loaded[k] = np.concatenate((loaded[k], v))
+        self.save(filename, loaded)
 
 
 class H5Store(DictStore):
