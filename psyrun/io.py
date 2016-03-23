@@ -3,7 +3,6 @@
 import errno
 
 import numpy as np
-import tables
 
 
 class DictStore(object):
@@ -81,6 +80,7 @@ class H5Store(DictStore):
         data : dict
             Data to store.
         """
+        import tables
         with tables.open_file(filename, 'w') as h5:
             for k, v in data.items():
                 h5.create_array(self.node, k, v, createparents=True)
@@ -98,6 +98,7 @@ class H5Store(DictStore):
         dict
             The data loaded.
         """
+        import tables
         with tables.open_file(filename, 'r') as h5:
             return {node._v_name: node.read() for node in h5.iter_nodes(
                 self.node)}
@@ -117,6 +118,7 @@ class H5Store(DictStore):
         data : dict
             Data to store.
         """
+        import tables
         with tables.open_file(filename, 'a') as h5:
             for k, v in data.items():
                 shape = _min_shape(np.asarray(x).shape for x in v)
