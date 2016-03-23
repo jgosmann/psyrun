@@ -1,5 +1,11 @@
+import os.path
+
+import pytest
+
+from psyrun.io import H5Store, NpzStore
 from psyrun.pspace import Param
-from psyrun.mapper import map_pspace, map_pspace_parallel
+from psyrun.mapper import (
+    map_pspace, map_pspace_parallel, map_pspace_hdd_backed)
 
 
 def square(a):
@@ -18,6 +24,33 @@ def test_map_pspace():
 
     assert calls == [{'a': 1}, {'a': 2}]
     assert result == {'a': [1, 2], 'result': [42, 42]}
+
+
+@pytest.mark.parametrize('store', [H5Store(), NpzStore()])
+def test_hdd_backed_mapper(tmpdir, store):
+    pspace = Param(a=[1, 2])
+    filename = os.path.join(str(tmpdir), 'out' + store.ext)
+    result = map_pspace_hdd_backed(
+        square, pspace, filename=filename, store=store)
+    assert list(result['a']) == [1, 2]
+    assert list(result['x']) == [1, 4]
+    loaded = store.load(filename)
+    assert list(loaded['a']) == [1, 2]
+    assert list(loaded['x']) == [1, 4]
+
+
+@pytest.mark.parametrize('store', [H5Store(), NpzStore()])
+def test_hdd_backed_mapper_continues(tmpdir, store):
+    pspace = Param(a=[1, 2])
+    filename = os.path.join(str(tmpdir), 'out' + store.ext)
+    store.append(filename, {'a': [1], 'x': [-1]})
+    result = map_pspace_hdd_backed(
+        square, pspace, filename=filename, store=store)
+    assert list(result['a']) == [1, 2]
+    assert list(result['x']) == [-1, 4]
+    loaded = store.load(filename)
+    assert list(loaded['a']) == [1, 2]
+    assert list(loaded['x']) == [-1, 4]
 
 
 def test_map_pspace_parallel():

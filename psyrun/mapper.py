@@ -1,6 +1,8 @@
 """Mappers to map functions onto parameter spaces."""
 
-from psyrun.pspace import dict_concat
+import os.path
+
+from psyrun.pspace import dict_concat, missing, Param
 
 
 def get_result(fn, params):
@@ -101,3 +103,11 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     parallel = joblib.Parallel(n_jobs=n_jobs, backend=backend)
     return dict_concat(parallel(
         joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
+
+
+def map_pspace_hdd_backed(fn, pspace, filename, store):
+    if os.path.exists(filename):
+        pspace = missing(pspace, Param.from_dict(store.load(filename)))
+    for p in pspace.iterate():
+        store.append(filename, dict_concat((get_result(fn, p),)))
+    return store.load(filename)
