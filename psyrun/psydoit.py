@@ -13,6 +13,7 @@ from doit.cmd_base import Command, TaskLoader
 from doit.doit_cmd import DoitMain
 
 from psyrun.io import NpzStore
+from psyrun.pspace import Param
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
 from psyrun.venv import init_virtualenv
@@ -96,7 +97,7 @@ class Config(object):
     """
 
     __slots__ = [
-        'workdir', 'result_file', 'scheduler',
+        'workdir', 'result_file', 'scheduler', 'pspace',
         'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
         'io']
 
@@ -105,6 +106,7 @@ class Config(object):
         self.result_file = None
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
+        self.pspace = Param()
         self.python = sys.executable
         self.max_splits = 64
         self.min_items = 4
