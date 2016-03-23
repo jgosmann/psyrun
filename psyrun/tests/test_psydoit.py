@@ -7,7 +7,6 @@ import pytest
 
 from psyrun.io import H5Store, NpzStore
 from psyrun.psydoit import TaskDef, Config, psydoit
-from psyrun.mapper import map_pspace
 from psyrun.mockscheduler import MockScheduler
 
 
@@ -62,8 +61,6 @@ def test_load_task_defaults():
     task = TaskDef(get_task_path('square'))
     assert task.path == get_task_path('square')
     assert task.name == 'square'
-    assert task.mapper == map_pspace
-    assert task.mapper_kwargs == {}
     assert hasattr(task, 'scheduler')
     assert hasattr(task, 'scheduler_args')
     assert hasattr(task, 'python')

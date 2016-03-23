@@ -15,7 +15,6 @@ from doit.doit_cmd import DoitMain
 from psyrun.io import NpzStore
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
-from psyrun.mapper import map_pspace
 from psyrun.venv import init_virtualenv
 
 
@@ -78,11 +77,6 @@ class Config(object):
     result_file : str or None
         Path to save the results of the finished task at. If ``None``, this
         defaults to ``'result.<ext>'`` in the `workdir`.
-    mapper : function
-        Function to map the task's ``execute`` function onto the parameter
-        space. Defaults to serial execution.
-    mapper_kwargs : dict
-        Additional keyword arguments for the `mapper` function.
     scheduler : :class:`.Scheduler`
         Scheduler to use to submit individual jobs. Defaults to
         :class:`.ImmediateRun`.
@@ -102,15 +96,13 @@ class Config(object):
     """
 
     __slots__ = [
-        'workdir', 'result_file', 'mapper', 'mapper_kwargs', 'scheduler',
+        'workdir', 'result_file', 'scheduler',
         'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
         'io']
 
     def __init__(self):
         self.workdir = os.path.abspath('psywork')
         self.result_file = None
-        self.mapper = map_pspace
-        self.mapper_kwargs = {}
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
         self.python = sys.executable
@@ -523,8 +515,7 @@ Splitter(
             code = '''
 from psyrun.processing import Worker
 execute = task.execute
-Worker(task.mapper, io=task.io, **task.mapper_kwargs).start(
-    execute, {infile!r}, {outfile!r})
+Worker(io=task.io).start(execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
             jobs.append(Job(str(i), self._submit, code, [infile], [outfile]))
 

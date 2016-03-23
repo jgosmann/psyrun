@@ -4,6 +4,7 @@ import os
 import os.path
 
 from psyrun.io import NpzStore
+from psyrun.mapper import map_pspace_hdd_backed
 from psyrun.pspace import dict_concat, Param
 
 
@@ -123,10 +124,8 @@ class Worker(object):
         Additional keyword arguments to pass to the `mapper`.
     """
 
-    def __init__(self, mapper, io=NpzStore(), **mapper_kwargs):
-        self.mapper = mapper
+    def __init__(self, io=NpzStore()):
         self.io = io
-        self.mapper_kwargs = mapper_kwargs
 
     def start(self, fn, infile, outfile):
         """Start processing a parameter space.
@@ -141,5 +140,8 @@ class Worker(object):
             Output filename for the results.
         """
         pspace = Param(**self.io.load(infile))
-        data = self.mapper(fn, pspace, **self.mapper_kwargs)
-        self.io.save(outfile, data)
+        out_root, out_ext = os.path.splitext(outfile)
+        map_pspace_hdd_backed(
+            fn, pspace, out_root + '.part' + out_ext, io=self.io,
+            return_data=False)
+        os.rename(out_root + '.part' + out_ext, outfile)

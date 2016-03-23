@@ -105,9 +105,12 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
         joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
 
 
-def map_pspace_hdd_backed(fn, pspace, filename, store):
+def map_pspace_hdd_backed(fn, pspace, filename, io, return_data=True):
     if os.path.exists(filename):
-        pspace = missing(pspace, Param.from_dict(store.load(filename)))
+        pspace = missing(pspace, Param.from_dict(io.load(filename)))
     for p in pspace.iterate():
-        store.append(filename, dict_concat((get_result(fn, p),)))
-    return store.load(filename)
+        io.append(filename, dict_concat((get_result(fn, p),)))
+    if not os.path.exists(filename):
+        io.save(filename, {})
+    if return_data:
+        return io.load(filename)

@@ -49,7 +49,7 @@ def test_worker(mapper, tmpdir):
     infile = os.path.join(str(tmpdir), 'in.npz')
     outfile = os.path.join(str(tmpdir), 'out.npz')
     NpzStore().save(infile, Param(a=range(7)).build())
-    worker = Worker(mapper)
+    worker = Worker(NpzStore())
     worker.start(square, infile, outfile)
     result = NpzStore().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
