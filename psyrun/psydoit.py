@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import itertools
 import os
 import os.path
@@ -7,7 +9,7 @@ import traceback
 import warnings
 
 from doit.task import dict_to_task
-from doit.cmd_base import DoitCmdBase, TaskLoader
+from doit.cmd_base import Command, TaskLoader
 from doit.doit_cmd import DoitMain
 
 from psyrun.io import NpzStore
@@ -166,19 +168,24 @@ class PackageLoader(TaskLoader):
         else:
             self.conf = Config()
 
-    def load_tasks(self, cmd, opt_values, pos_args):
-        task_list = []
+    def load_task_defs(self):
+        task_defs = []
         for filename in os.listdir(self.taskdir):
             root, ext = os.path.splitext(filename)
             if TaskDef.TASK_PATTERN.match(root) and ext == '.py':
                 path = os.path.join(self.taskdir, filename)
                 try:
-                    task = TaskDef(path, self.conf)
-                    task_list.extend(self.create_task(task))
+                    task_defs.append(TaskDef(path, self.conf))
                 except Exception:
                     traceback.print_exc()
                     warnings.warn("Task {path!r} could not be loaded.".format(
                         path=path))
+        return task_defs
+
+    def load_tasks(self, cmd, opt_values, pos_args):
+        task_list = []
+        for task_def in self.load_task_defs():
+            task_list.extend(self.create_task(task_def))
         return task_list, {}
 
     def create_task(self, task):
@@ -556,16 +563,18 @@ def psydoit(taskdir, argv=sys.argv[1:]):
     return PsyDoit(PackageLoader(taskdir)).run(argv)
 
 
-class Test(DoitCmdBase):
+class Test(Command):
     doc_purpose = "Test task by running it immediately for one parameter set."
     doc_usage = "[TASK ...]"
     doc_description = None
 
     cmd_options = ()
 
-    def _execute(self):
-        for t in self.task_list:
-            print t
+    def execute(self, opt_values, pos_args):
+        for t in PackageLoader('psy-tasks').load_task_defs():
+            if len(pos_args) <= 0 or t.name in pos_args:
+                print(t.name)
+                t.execute(**t.pspace.iterate().next())
 
 
 class PsyDoit(DoitMain):
