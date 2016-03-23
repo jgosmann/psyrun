@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from psyrun.pspace import AmbiguousOperationError, dict_concat, Param
+from psyrun.pspace import AmbiguousOperationError, dict_concat, missing, Param
 
 
 @pytest.mark.parametrize('args,result', [
@@ -53,6 +53,13 @@ class TestParam(object):
         space = Param(a=[1], b=[2.]).build()
         assert np.issubdtype(type(space['a'][0]), int)
         assert np.issubdtype(type(space['b'][0]), float)
+
+    def test_from_dict(self):
+        d = {'a': [1, 2], 'b.x': 3, 'b.y': [4, 5]}
+        space = Param.from_dict(d).build()
+        assert space['a'] == [1, 2]
+        assert space['b.x'] == [3, 3]
+        assert space['b.y'] == [4, 5]
 
 
 class TestProduct(object):
@@ -131,3 +138,24 @@ class TestDifference(object):
 
     def test_length(self):
         assert len(Param(a=[1, 2, 2], b=[4, 5, 6]) - Param(a=[2])) == 1
+
+
+class TestMissing(object):
+    def test_missing(self):
+        space = missing(Param(a=[1, 2, 3]), Param(a=[2])).build()
+        assert sorted(space['a']) == [1, 3]
+
+    def test_param_missing_in_subtrahend(self):
+        with pytest.raises(AmbiguousOperationError):
+            missing(Param(a=[1, 2, 2], b=[4, 5, 6]), Param(a=[2])).build()
+
+    def test_param_missign_in_minuend(self):
+        space = missing(Param(a=[1, 2, 3]), Param(a=[2], b=[3])).build()
+        assert sorted(space['a']) == [1, 3]
+
+    def test_empty_subtrahend(self):
+        space = missing(Param(a=[1, 2, 3]), Param()).build()
+        assert sorted(space['a']) == [1, 2, 3]
+
+    def test_length(self):
+        assert len(missing(Param(a=[1, 2, 3]), Param(a=[2]))) == 2

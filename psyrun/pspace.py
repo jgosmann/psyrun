@@ -145,6 +145,10 @@ class Param(_PSpaceObj):
         except TypeError:
             return p
 
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
 
 class Difference(_PSpaceObj):
     """Implements the difference of two parameter spaces.
@@ -268,6 +272,16 @@ class Sum(_PSpaceObj):
 
     def __len__(self):
         return len(self.left) + len(self.right)
+
+
+def missing(minuend, subtrahend):
+    if len(subtrahend) <= 0:
+        return minuend
+    for k in minuend.keys():
+        if k not in subtrahend.keys():
+            raise AmbiguousOperationError()
+    return minuend - Param.from_dict(
+        {k: v for k, v in subtrahend.build().items() if k in minuend.keys()})
 
 
 class AmbiguousOperationError(RuntimeError):
