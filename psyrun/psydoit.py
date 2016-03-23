@@ -7,7 +7,7 @@ import traceback
 import warnings
 
 from doit.task import dict_to_task
-from doit.cmd_base import TaskLoader
+from doit.cmd_base import DoitCmdBase, TaskLoader
 from doit.doit_cmd import DoitMain
 
 from psyrun.io import NpzStore
@@ -553,4 +553,20 @@ def psydoit(taskdir, argv=sys.argv[1:]):
         more details.
     """
     init_virtualenv()
-    return DoitMain(PackageLoader(taskdir)).run(argv)
+    return PsyDoit(PackageLoader(taskdir)).run(argv)
+
+
+class Test(DoitCmdBase):
+    doc_purpose = "Test task by running it immediately for one parameter set."
+    doc_usage = "[TASK ...]"
+    doc_description = None
+
+    cmd_options = ()
+
+    def _execute(self):
+        for t in self.task_list:
+            print t
+
+
+class PsyDoit(DoitMain):
+    DOIT_CMDS = DoitMain.DOIT_CMDS + (Test,)
