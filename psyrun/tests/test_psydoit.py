@@ -90,6 +90,14 @@ def test_psydoit(taskenv):
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
+def test_psydoit_load_balancing(taskenv):
+    psydoit(
+        taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_load_balanced'])
+    result = NpzStore().load(
+        os.path.join(taskenv.workdir, 'square_load_balanced', 'result.npz'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
+
+
 def test_psydoit_h5_backend(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_h5'])
     result = H5Store().load(
@@ -110,6 +118,25 @@ def test_psydoit_workdir_contents(taskenv):
     assert os.path.exists(os.path.join(workdir, 'square:split.log'))
     assert os.path.exists(os.path.join(workdir, 'square:process:0.log'))
     assert os.path.exists(os.path.join(workdir, 'square:merge.log'))
+
+
+def test_psydoit_workdir_contents_load_balanced(taskenv):
+    workdir = os.path.join('psywork', 'square_load_balanced')
+    os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
+    psydoit(
+        taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_load_balanced'])
+    assert os.path.exists(os.path.join(workdir, 'in.npz'))
+    assert os.path.exists(os.path.join(workdir, 'result.npz'))
+    assert os.path.exists(os.path.join(
+        workdir, 'square_load_balanced:pspace.py'))
+    assert os.path.exists(os.path.join(
+        workdir, 'square_load_balanced:process:0.py'))
+    assert os.path.exists(os.path.join(
+        workdir, 'square_load_balanced:process:1.py'))
+    assert os.path.exists(os.path.join(
+        workdir, 'square_load_balanced:process:0.log'))
+    assert os.path.exists(os.path.join(
+        workdir, 'square_load_balanced:process:1.log'))
 
 
 def test_psydoit_file_dep(taskenv):

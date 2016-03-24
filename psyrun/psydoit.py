@@ -90,6 +90,8 @@ class Config(object):
         of jobs started.
     min_items : int
         Minimum number of parameter sets to evaluate per job.
+    method : TODO
+        TODO
     file_dep : list of str
         Additional files the task depends on.
     io : :class:`DictStore`
@@ -97,7 +99,7 @@ class Config(object):
     """
 
     __slots__ = [
-        'workdir', 'result_file', 'scheduler', 'pspace',
+        'workdir', 'result_file', 'scheduler', 'pspace', 'method',
         'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
         'io']
 
@@ -110,6 +112,7 @@ class Config(object):
         self.python = sys.executable
         self.max_splits = 64
         self.min_items = 4
+        self.method = DistributeSubtaskCreator
         self.file_dep = []
         self.io = NpzStore()
 
@@ -189,7 +192,7 @@ class PackageLoader(TaskLoader):
         })
         group_task.has_subtask = True
 
-        creator = DistributeSubtaskCreator(task)
+        creator = task.method(task)
         return creator.create_subtasks()
 
 
@@ -406,28 +409,13 @@ class Uptodate(JobTreeVisitor):
         return os.path.exists(filename) and os.stat(filename).st_mtime >= tref
 
 
-class DistributeSubtaskCreator(object):
-    """Create subtasks for to distribute parameter evaluations.
-
-    Parameters
-    ----------
-    task : :class:`.TaskDef`
-        Task definition to create subtasks for.
-    """
-
+class AbstractSubtaskCreator(object):
     def __init__(self, task):
-        self.splitter = Splitter(
-            os.path.join(task.workdir, task.name), task.pspace,
-            task.max_splits, task.min_items, io=task.io)
+        super(AbstractSubtaskCreator, self).__init__()
         self.task = task
-
-    @property
-    def result_file(self):
-        if self.task.result_file:
-            return self.task.result_file
-        else:
-            return os.path.join(
-                self.splitter.workdir, 'result' + self.splitter.io.ext)
+        self.workdir = os.path.join(task.workdir, task.name)
+        if not os.path.exists(self.workdir):
+            os.makedirs(self.workdir)
 
     def _submit(self, code, name, depends_on=None):
         """Submits some code to execute to the task scheduler.
@@ -469,8 +457,8 @@ task = TaskDef({taskpath!r})
             path=sys.path,
             taskdir=os.path.abspath(os.path.dirname(self.task.path)),
             taskpath=os.path.abspath(self.task.path), code=code)
-        codefile = os.path.join(self.splitter.workdir, name + '.py')
-        output_filename = os.path.join(self.splitter.workdir, name + '.log')
+        codefile = os.path.join(self.workdir, name + '.py')
+        output_filename = os.path.join(self.workdir, name + '.log')
         with open(codefile, 'w') as f:
             f.write(code)
 
@@ -488,6 +476,33 @@ task = TaskDef({taskpath!r})
         names = Fullname(job).names
         return ToDoitTask(names, Uptodate(
             job, names, self.task.scheduler).status).visit(job)
+
+    def create_job(self):
+        raise NotImplementedError()
+
+
+class DistributeSubtaskCreator(AbstractSubtaskCreator):
+    """Create subtasks for to distribute parameter evaluations.
+
+    Parameters
+    ----------
+    task : :class:`.TaskDef`
+        Task definition to create subtasks for.
+    """
+
+    def __init__(self, task):
+        super(DistributeSubtaskCreator, self).__init__(task)
+        self.splitter = Splitter(
+            self.workdir, task.pspace, task.max_splits, task.min_items,
+            io=task.io)
+
+    @property
+    def result_file(self):
+        if self.task.result_file:
+            return self.task.result_file
+        else:
+            return os.path.join(
+                self.splitter.workdir, 'result' + self.splitter.io.ext)
 
     def create_job(self):
         split = self.create_split_job()
@@ -533,6 +548,65 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, io=task.io)
             'merge', self._submit, code,
             [f for _, f in self.splitter.iter_in_out_files()],
             [self.result_file])
+
+
+class LoadBalancingSubtaskCreator(AbstractSubtaskCreator):
+    @property
+    def infile(self):
+        return os.path.join(self.workdir, 'in' + self.task.io.ext)
+
+    @property
+    def statusfile(self):
+        return os.path.join(self.workdir, 'status')
+
+    @property
+    def result_file(self):
+        if self.task.result_file:
+            return self.task.result_file
+        else:
+            return os.path.join(self.workdir, 'result' + self.task.io.ext)
+
+    def create_job(self):
+        pspace = self.create_pspace_job()
+        process = self.create_process_job()
+        return JobChain(self.task.name, [pspace, process])
+
+    def create_pspace_job(self):
+        code = '''
+import os.path
+from psyrun.pspace import missing, Param
+from psyrun.processing import LoadBalancingWorker
+if os.path.exists({outfile!r}):
+    pspace = missing(task.pspace, Param.from_dict(task.io.load({outfile!r})))
+else:
+    pspace = task.pspace
+task.io.save({infile!r}, pspace.build())
+LoadBalancingWorker.create_statusfile({statusfile!r})
+        '''.format(
+            infile=self.infile, outfile=self.result_file,
+            statusfile=self.statusfile)
+        file_dep = [os.path.join(os.path.dirname(self.task.path), f)
+                    for f in self.task.file_dep]
+        return Job(
+            'pspace', self._submit, code, [self.task.path] + file_dep,
+            [self.infile])
+
+    # FIXME creates a bunch of identical python files.
+    def create_process_job(self):
+        jobs = []
+        code = '''
+from psyrun.processing import LoadBalancingWorker
+LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.io).start(
+    task.execute)
+        '''.format(
+            infile=self.infile, outfile=self.result_file,
+            statusfile=self.statusfile)
+        for i in range(self.task.max_splits):
+            jobs.append(Job(
+                str(i), self._submit, code, [self.infile], [self.result_file]))
+
+        group = JobGroup('process', jobs)
+        return group
 
 
 def psydoit(taskdir, argv=sys.argv[1:]):

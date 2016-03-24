@@ -1,10 +1,11 @@
 """File-based processing of parameter spaces."""
 
+import fcntl
 import os
 import os.path
 
 from psyrun.io import NpzStore
-from psyrun.mapper import map_pspace_hdd_backed
+from psyrun.mapper import map_pspace, map_pspace_hdd_backed
 from psyrun.pspace import dict_concat, Param
 
 
@@ -145,3 +146,61 @@ class Worker(object):
             fn, pspace, out_root + '.part' + out_ext, io=self.io,
             return_data=False)
         os.rename(out_root + '.part' + out_ext, outfile)
+
+
+class LoadBalancingWorker(object):
+    def __init__(self, infile, outfile, statusfile, io=NpzStore()):
+        self.infile = infile
+        self.outfile = outfile
+        self.statusfile = statusfile
+        self.io = io
+
+    @classmethod
+    def create_statusfile(cls, statusfile):
+        with open(statusfile, 'w') as f:
+            f.write('0')
+            f.flush()
+
+    def get_next_ix(self):
+        with open(self.statusfile, 'r+') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                ix = int(f.read())
+                f.seek(0)
+                f.truncate(0)
+                f.write(str(ix + 1))
+                f.flush()
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+        return ix
+
+    def get_next_param_set(self):
+        return self.io.load(self.infile, row=self.get_next_ix())
+
+    def save_data(self, data):
+        with open(self.statusfile + '.lock', 'w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                self.io.append(self.outfile, data)
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
+    def start(self, fn):
+        """Start processing a parameter space.
+
+        Parameters
+        ----------
+        fn : function
+            Function to evaluate on the parameter space.
+        infile : str
+            Parameter space input filename.
+        outfile : str
+            Output filename for the results.
+        """
+        while True:
+            try:
+                pspace = Param.from_dict(self.get_next_param_set())
+            except IndexError:
+                return
+            data = map_pspace(fn, pspace)
+            self.save_data(data)

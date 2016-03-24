@@ -3,9 +3,9 @@ import os.path
 
 import pytest
 
-from psyrun.io import NpzStore
+from psyrun.io import NpzStore, H5Store
 from psyrun.pspace import Param
-from psyrun.processing import Splitter, Worker
+from psyrun.processing import Splitter, Worker, LoadBalancingWorker
 
 
 def square(a):
@@ -44,11 +44,25 @@ class TestSplitter(object):
 
 
 def test_worker(tmpdir):
-    infile = os.path.join(str(tmpdir), 'in.npz')
-    outfile = os.path.join(str(tmpdir), 'out.npz')
+    infile = str(tmpdir.join('in.npz'))
+    outfile = str(tmpdir.join('out.npz'))
     NpzStore().save(infile, Param(a=range(7)).build())
     worker = Worker(NpzStore())
     worker.start(square, infile, outfile)
     result = NpzStore().load(outfile)
+    assert sorted(result['a']) == sorted(range(7))
+    assert sorted(result['x']) == [i ** 2 for i in range(7)]
+
+
+@pytest.mark.parametrize('io', [NpzStore(), H5Store()])
+def test_load_balancing_worker(tmpdir, io):
+    infile = str(tmpdir.join('in.npz'))
+    outfile = str(tmpdir.join('out.npz'))
+    statusfile = str(tmpdir.join('status'))
+    io.save(infile, Param(a=range(7)).build())
+    LoadBalancingWorker.create_statusfile(statusfile)
+    worker = LoadBalancingWorker(infile, outfile, statusfile, io)
+    worker.start(square)
+    result = io.load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]
