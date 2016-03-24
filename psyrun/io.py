@@ -22,10 +22,13 @@ class NpzStore(DictStore):
     def save(self, filename, data):
         np.savez(filename, **data)
 
-    def load(self, filename):
+    def load(self, filename, row=None):
         try:
             with np.load(filename) as data:
-                return dict(data)
+                if row is None:
+                    return dict(data)
+                else:
+                    return {k: [v[row]] for k, v in data.items()}
         except IOError as err:
             if 'as a pickle' in str(err):
                 return {}
@@ -85,7 +88,7 @@ class H5Store(DictStore):
             for k, v in data.items():
                 h5.create_array(self.node, k, v, createparents=True)
 
-    def load(self, filename):
+    def load(self, filename, row=None):
         """Read a dictionary from an HDF5 file.
 
         Parameters
@@ -100,7 +103,7 @@ class H5Store(DictStore):
         """
         import tables
         with tables.open_file(filename, 'r') as h5:
-            return {node._v_name: node.read() for node in h5.iter_nodes(
+            return {node._v_name: node.read(row) for node in h5.iter_nodes(
                 self.node)}
 
 

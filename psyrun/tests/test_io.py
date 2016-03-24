@@ -18,6 +18,13 @@ class TestDictStores(object):
             for a, b in zip(pspace[k], saved_pspace[k]):
                 assert a == b or (np.isnan(a)and np.isnan(b))
 
+    def test_load_specific_row(self, store, tmpdir):
+        filename = str(tmpdir.join('infile' + store.ext))
+        pspace = Param(a=range(5)).build()
+        store.save(filename, pspace)
+        saved_pspace = store.load(filename, row=2)
+        assert sorted(pspace.keys()) == sorted(saved_pspace.keys())
+        assert list(saved_pspace['a']) == [2]
 
     def test_merging_multidimensional_results(self, store, tmpdir):
         filename = str(tmpdir.join('r' + store.ext))
@@ -30,7 +37,6 @@ class TestDictStores(object):
 
         saved = store.load(filename)
         assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
-
 
     def test_merging_results_with_varying_dimensionality(self, store, tmpdir):
         filename = str(tmpdir.join('r' + store.ext))
