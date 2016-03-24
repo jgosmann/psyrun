@@ -5,7 +5,6 @@ import pytest
 
 from psyrun.io import NpzStore
 from psyrun.pspace import Param
-from psyrun.mapper import map_pspace, map_pspace_parallel
 from psyrun.processing import Splitter, Worker
 
 
@@ -44,8 +43,7 @@ class TestSplitter(object):
         assert sorted(result['x']) == sorted(range(pspace_size))
 
 
-@pytest.mark.parametrize('mapper', [map_pspace, map_pspace_parallel])
-def test_worker(mapper, tmpdir):
+def test_worker(tmpdir):
     infile = os.path.join(str(tmpdir), 'in.npz')
     outfile = os.path.join(str(tmpdir), 'out.npz')
     NpzStore().save(infile, Param(a=range(7)).build())
