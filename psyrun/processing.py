@@ -23,11 +23,12 @@ class Splitter(object):
         Maximum number of splits to perform.
     min_items : int
         Minimum number of parameter sets in each split.
-    io : :class:`DictStore`
+    store : :class:`.io.AbstractStore`
         Input/output backend.
     """
     def __init__(
-            self, workdir, pspace, max_splits=64, min_items=4, io=NpzStore()):
+            self, workdir, pspace, max_splits=64, min_items=4,
+            store=NpzStore()):
         self.workdir = workdir
         self.indir = self._get_indir(workdir)
         self.outdir = self._get_outdir(workdir)
@@ -41,7 +42,7 @@ class Splitter(object):
         self.max_splits = max_splits
         self.min_items = min_items
 
-        self.io = io
+        self.store = store
 
     @property
     def n_splits(self):
@@ -60,10 +61,10 @@ class Splitter(object):
             items_remaining -= split_size
             block = dict_concat(
                 [row for row in self._iter_n(param_iter, split_size)])
-            self.io.save(os.path.join(self.indir, filename), block)
+            self.store.save(os.path.join(self.indir, filename), block)
 
     @classmethod
-    def merge(cls, outdir, merged_filename, append=True, io=NpzStore()):
+    def merge(cls, outdir, merged_filename, append=True, store=NpzStore()):
         """Merge processed files together.
 
         Parameters
@@ -75,16 +76,16 @@ class Splitter(object):
         append : bool
             If ``True`` the merged data will be appended, otherwise the file
             will be overwritten with the merged data.
-        io : :class:`DictStore`
+        store : :class:`AbstractStore`
             Input/output backend.
         """
         if not append:
-            io.save(merged_filename, {})
+            store.save(merged_filename, {})
         for filename in os.listdir(outdir):
-            if os.path.splitext(filename)[1] != io.ext:
+            if os.path.splitext(filename)[1] != store.ext:
                 continue
             infile = os.path.join(outdir, filename)
-            io.append(merged_filename, io.load(infile))
+            store.append(merged_filename, store.load(infile))
 
     def iter_in_out_files(self):
         """Return generator returning tuples of corresponding input and output
@@ -93,7 +94,7 @@ class Splitter(object):
                 for f in self._iter_filenames())
 
     def _iter_filenames(self):
-        return (str(i) + self.io.ext for i in range(self.n_splits))
+        return (str(i) + self.store.ext for i in range(self.n_splits))
 
     @staticmethod
     def _iter_n(it, n):
@@ -119,14 +120,12 @@ class Worker(object):
         Function that takes another function, a parameter space, and
         potentially further keyword arguments and returns the result of mapping
         the function onto the parameter space.
-    io : :class:`DictStore`
+    store : :class:`.store.AbstractStore`
         Input/output backend.
-    mapper_kwargs : dict
-        Additional keyword arguments to pass to the `mapper`.
     """
 
-    def __init__(self, io=NpzStore()):
-        self.io = io
+    def __init__(self, store=NpzStore()):
+        self.store = store
 
     def start(self, fn, infile, outfile):
         """Start processing a parameter space.
@@ -140,23 +139,43 @@ class Worker(object):
         outfile : str
             Output filename for the results.
         """
-        pspace = Param(**self.io.load(infile))
+        pspace = Param(**self.store.load(infile))
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
-            fn, pspace, out_root + '.part' + out_ext, store=self.io,
+            fn, pspace, out_root + '.part' + out_ext, store=self.store,
             return_data=False)
         os.rename(out_root + '.part' + out_ext, outfile)
 
 
 class LoadBalancingWorker(object):
-    def __init__(self, infile, outfile, statusfile, io=NpzStore()):
+    """Maps a function to the parameter space supporting other parallel workers.
+
+    Parameters
+    ----------
+    infile : str
+        Filename of the file with the input parameters space.
+    outfile : str
+        Filename of the file to write the results to.
+    statusfile : str
+        Filename of the file to track the processing progress.
+    store : class:`.store.AbstractStore`
+        Input/output backend.
+    """
+    def __init__(self, infile, outfile, statusfile, store=NpzStore()):
         self.infile = infile
         self.outfile = outfile
         self.statusfile = statusfile
-        self.io = io
+        self.store = store
 
     @classmethod
     def create_statusfile(cls, statusfile):
+        """Creates the status file required by all load balancing workers.
+
+        Parameters
+        ----------
+        statusfile : str
+            Filename of the status file.
+        """
         with open(statusfile, 'w') as f:
             f.write('0')
             f.flush()
@@ -175,27 +194,26 @@ class LoadBalancingWorker(object):
         return ix
 
     def get_next_param_set(self):
-        return self.io.load(self.infile, row=self.get_next_ix())
+        return self.store.load(self.infile, row=self.get_next_ix())
 
     def save_data(self, data):
         with open(self.statusfile + '.lock', 'w') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
-                self.io.append(self.outfile, data)
+                self.store.append(self.outfile, data)
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
     def start(self, fn):
         """Start processing a parameter space.
 
+        A status file needs to be created before invoking this function by
+        calling :func:`LoadBalancingWorker.create_statusfile`.
+
         Parameters
         ----------
         fn : function
             Function to evaluate on the parameter space.
-        infile : str
-            Parameter space input filename.
-        outfile : str
-            Output filename for the results.
         """
         while True:
             try:

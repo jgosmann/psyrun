@@ -94,14 +94,14 @@ class Config(object):
         TODO
     file_dep : list of str
         Additional files the task depends on.
-    io : :class:`DictStore`
+    store : :class:`.store.AbstractStore`
         Input/output backend. Defaults to :class:`NpzStore`.
     """
 
     __slots__ = [
         'workdir', 'result_file', 'scheduler', 'pspace', 'method',
         'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
-        'io']
+        'store']
 
     def __init__(self):
         self.workdir = os.path.abspath('psywork')
@@ -114,7 +114,7 @@ class Config(object):
         self.min_items = 4
         self.method = DistributeSubtaskCreator
         self.file_dep = []
-        self.io = NpzStore()
+        self.store = NpzStore()
 
     @classmethod
     def load_from_file(cls, filename):
@@ -494,7 +494,7 @@ class DistributeSubtaskCreator(AbstractSubtaskCreator):
         super(DistributeSubtaskCreator, self).__init__(task)
         self.splitter = Splitter(
             self.workdir, task.pspace, task.max_splits, task.min_items,
-            io=task.io)
+            store=task.store)
 
     @property
     def result_file(self):
@@ -502,7 +502,7 @@ class DistributeSubtaskCreator(AbstractSubtaskCreator):
             return self.task.result_file
         else:
             return os.path.join(
-                self.splitter.workdir, 'result' + self.splitter.io.ext)
+                self.splitter.workdir, 'result' + self.splitter.store.ext)
 
     def create_job(self):
         split = self.create_split_job()
@@ -515,7 +515,7 @@ class DistributeSubtaskCreator(AbstractSubtaskCreator):
 from psyrun.processing import Splitter
 Splitter(
     {workdir!r}, task.pspace, {max_splits!r}, {min_items!r},
-    io=task.io).split()
+    store=task.store).split()
         '''.format(
             workdir=self.splitter.workdir, max_splits=self.task.max_splits,
             min_items=self.task.min_items)
@@ -532,7 +532,7 @@ Splitter(
             code = '''
 from psyrun.processing import Worker
 execute = task.execute
-Worker(io=task.io).start(execute, {infile!r}, {outfile!r})
+Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
             jobs.append(Job(str(i), self._submit, code, [infile], [outfile]))
 
@@ -542,7 +542,7 @@ Worker(io=task.io).start(execute, {infile!r}, {outfile!r})
     def create_merge_job(self):
         code = '''
 from psyrun.processing import Splitter
-Splitter.merge({outdir!r}, {filename!r}, append=False, io=task.io)
+Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
         '''.format(outdir=self.splitter.outdir, filename=self.result_file)
         return Job(
             'merge', self._submit, code,
@@ -553,7 +553,7 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, io=task.io)
 class LoadBalancingSubtaskCreator(AbstractSubtaskCreator):
     @property
     def infile(self):
-        return os.path.join(self.workdir, 'in' + self.task.io.ext)
+        return os.path.join(self.workdir, 'in' + self.task.store.ext)
 
     @property
     def statusfile(self):
@@ -564,7 +564,7 @@ class LoadBalancingSubtaskCreator(AbstractSubtaskCreator):
         if self.task.result_file:
             return self.task.result_file
         else:
-            return os.path.join(self.workdir, 'result' + self.task.io.ext)
+            return os.path.join(self.workdir, 'result' + self.task.store.ext)
 
     def create_job(self):
         pspace = self.create_pspace_job()
@@ -577,10 +577,10 @@ import os.path
 from psyrun.pspace import missing, Param
 from psyrun.processing import LoadBalancingWorker
 if os.path.exists({outfile!r}):
-    pspace = missing(task.pspace, Param.from_dict(task.io.load({outfile!r})))
+    pspace = missing(task.pspace, Param.from_dict(task.store.load({outfile!r})))
 else:
     pspace = task.pspace
-task.io.save({infile!r}, pspace.build())
+task.store.save({infile!r}, pspace.build())
 LoadBalancingWorker.create_statusfile({statusfile!r})
         '''.format(
             infile=self.infile, outfile=self.result_file,
@@ -596,7 +596,7 @@ LoadBalancingWorker.create_statusfile({statusfile!r})
         jobs = []
         code = '''
 from psyrun.processing import LoadBalancingWorker
-LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.io).start(
+LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.store).start(
     task.execute)
         '''.format(
             infile=self.infile, outfile=self.result_file,

@@ -3,7 +3,7 @@ from psyrun.store import H5Store
 
 
 pspace = Param(x=range(4))
-io = H5Store()
+store = H5Store()
 
 
 def execute(x):
