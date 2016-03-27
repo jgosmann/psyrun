@@ -143,7 +143,7 @@ class Worker(object):
         pspace = Param(**self.io.load(infile))
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
-            fn, pspace, out_root + '.part' + out_ext, io=self.io,
+            fn, pspace, out_root + '.part' + out_ext, store=self.io,
             return_data=False)
         os.rename(out_root + '.part' + out_ext, outfile)
 

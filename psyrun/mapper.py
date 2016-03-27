@@ -105,12 +105,35 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
         joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
 
 
-def map_pspace_hdd_backed(fn, pspace, filename, io, return_data=True):
+def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
+    """Maps a function to parameter space values while storing produced data.
+
+    Data is stored progressively.
+
+    Parameters
+    ----------
+    fn : function
+        Function to evaluate on parameter space. Has to return a dictionary.
+    pspace : :class:`.pspace._PSpaceObj`
+        Parameter space providing parameter values to evaluate function on.
+    filename : str
+        Filename of file to store data to.
+    store : :class:`.store.AbstractStore`
+        Store to save data with.
+    return_data : bool, optional
+        Whether to return the resulting data after mapping the function. This
+        will read all produced data from the disk again.
+
+    Returns
+    ``None`` or dict
+        Dictionary with the input parameter values and the function return
+        values if requested.
+    """
     if os.path.exists(filename):
-        pspace = missing(pspace, Param.from_dict(io.load(filename)))
+        pspace = missing(pspace, Param.from_dict(store.load(filename)))
     for p in pspace.iterate():
-        io.append(filename, dict_concat((get_result(fn, p),)))
+        store.append(filename, dict_concat((get_result(fn, p),)))
     if not os.path.exists(filename):
-        io.save(filename, {})
+        store.save(filename, {})
     if return_data:
-        return io.load(filename)
+        return store.load(filename)

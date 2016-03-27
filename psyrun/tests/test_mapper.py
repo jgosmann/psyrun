@@ -31,7 +31,7 @@ def test_hdd_backed_mapper(tmpdir, store):
     pspace = Param(a=[1, 2])
     filename = os.path.join(str(tmpdir), 'out' + store.ext)
     result = map_pspace_hdd_backed(
-        square, pspace, filename=filename, io=store)
+        square, pspace, filename=filename, store=store)
     assert list(result['a']) == [1, 2]
     assert list(result['x']) == [1, 4]
     loaded = store.load(filename)
@@ -45,7 +45,7 @@ def test_hdd_backed_mapper_continues(tmpdir, store):
     filename = os.path.join(str(tmpdir), 'out' + store.ext)
     store.append(filename, {'a': [1], 'x': [-1]})
     result = map_pspace_hdd_backed(
-        square, pspace, filename=filename, io=store)
+        square, pspace, filename=filename, store=store)
     assert list(result['a']) == [1, 2]
     assert list(result['x']) == [-1, 4]
     loaded = store.load(filename)
