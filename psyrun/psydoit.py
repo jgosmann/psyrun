@@ -75,7 +75,7 @@ class Config(object):
     ----------
     workdir : str
         Working directory to store task data in.
-    result_file : str or None
+    resultfile : str or None
         Path to save the results of the finished task at. If ``None``, this
         defaults to ``'result.<ext>'`` in the `workdir`.
     scheduler : :class:`.Scheduler`
@@ -85,12 +85,12 @@ class Config(object):
         Additional scheduler arguments.
     python : str
         Path to Python interpreter to use.
-    max_splits : int
+    max_jobs : int
         Maximum number of splits of the parameter space. This limits the number
         of jobs started.
     min_items : int
         Minimum number of parameter sets to evaluate per job.
-    method : TODO
+    backend : TODO
         TODO
     file_dep : list of str
         Additional files the task depends on.
@@ -99,20 +99,20 @@ class Config(object):
     """
 
     __slots__ = [
-        'workdir', 'result_file', 'scheduler', 'pspace', 'method',
-        'scheduler_args', 'python', 'max_splits', 'min_items', 'file_dep',
+        'workdir', 'resultfile', 'scheduler', 'pspace', 'backend',
+        'scheduler_args', 'python', 'max_jobs', 'min_items', 'file_dep',
         'store']
 
     def __init__(self):
         self.workdir = os.path.abspath('psywork')
-        self.result_file = None
+        self.resultfile = None
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
         self.pspace = Param()
         self.python = sys.executable
-        self.max_splits = 64
+        self.max_jobs = 64
         self.min_items = 4
-        self.method = DistributeSubtaskCreator
+        self.backend = DistributeBackend
         self.file_dep = []
         self.store = NpzStore()
 
@@ -192,7 +192,7 @@ class PackageLoader(TaskLoader):
         })
         group_task.has_subtask = True
 
-        creator = task.method(task)
+        creator = task.backend(task)
         return creator.create_subtasks()
 
 
@@ -409,9 +409,9 @@ class Uptodate(JobTreeVisitor):
         return os.path.exists(filename) and os.stat(filename).st_mtime >= tref
 
 
-class AbstractSubtaskCreator(object):
+class AbstractBackend(object):
     def __init__(self, task):
-        super(AbstractSubtaskCreator, self).__init__()
+        super(AbstractBackend, self).__init__()
         self.task = task
         self.workdir = os.path.join(task.workdir, task.name)
         if not os.path.exists(self.workdir):
@@ -481,7 +481,7 @@ task = TaskDef({taskpath!r})
         raise NotImplementedError()
 
 
-class DistributeSubtaskCreator(AbstractSubtaskCreator):
+class DistributeBackend(AbstractBackend):
     """Create subtasks for to distribute parameter evaluations.
 
     Parameters
@@ -491,15 +491,15 @@ class DistributeSubtaskCreator(AbstractSubtaskCreator):
     """
 
     def __init__(self, task):
-        super(DistributeSubtaskCreator, self).__init__(task)
+        super(DistributeBackend, self).__init__(task)
         self.splitter = Splitter(
-            self.workdir, task.pspace, task.max_splits, task.min_items,
+            self.workdir, task.pspace, task.max_jobs, task.min_items,
             store=task.store)
 
     @property
-    def result_file(self):
-        if self.task.result_file:
-            return self.task.result_file
+    def resultfile(self):
+        if self.task.resultfile:
+            return self.task.resultfile
         else:
             return os.path.join(
                 self.splitter.workdir, 'result' + self.splitter.store.ext)
@@ -514,10 +514,10 @@ class DistributeSubtaskCreator(AbstractSubtaskCreator):
         code = '''
 from psyrun.processing import Splitter
 Splitter(
-    {workdir!r}, task.pspace, {max_splits!r}, {min_items!r},
+    {workdir!r}, task.pspace, {max_jobs!r}, {min_items!r},
     store=task.store).split()
         '''.format(
-            workdir=self.splitter.workdir, max_splits=self.task.max_splits,
+            workdir=self.splitter.workdir, max_jobs=self.task.max_jobs,
             min_items=self.task.min_items)
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
@@ -543,14 +543,14 @@ Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
         code = '''
 from psyrun.processing import Splitter
 Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
-        '''.format(outdir=self.splitter.outdir, filename=self.result_file)
+        '''.format(outdir=self.splitter.outdir, filename=self.resultfile)
         return Job(
             'merge', self._submit, code,
             [f for _, f in self.splitter.iter_in_out_files()],
-            [self.result_file])
+            [self.resultfile])
 
 
-class LoadBalancingSubtaskCreator(AbstractSubtaskCreator):
+class LoadBalancingBackend(AbstractBackend):
     @property
     def infile(self):
         return os.path.join(self.workdir, 'in' + self.task.store.ext)
@@ -560,9 +560,9 @@ class LoadBalancingSubtaskCreator(AbstractSubtaskCreator):
         return os.path.join(self.workdir, 'status')
 
     @property
-    def result_file(self):
-        if self.task.result_file:
-            return self.task.result_file
+    def resultfile(self):
+        if self.task.resultfile:
+            return self.task.resultfile
         else:
             return os.path.join(self.workdir, 'result' + self.task.store.ext)
 
@@ -583,7 +583,7 @@ else:
 task.store.save({infile!r}, pspace.build())
 LoadBalancingWorker.create_statusfile({statusfile!r})
         '''.format(
-            infile=self.infile, outfile=self.result_file,
+            infile=self.infile, outfile=self.resultfile,
             statusfile=self.statusfile)
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
@@ -599,11 +599,11 @@ from psyrun.processing import LoadBalancingWorker
 LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.store).start(
     task.execute)
         '''.format(
-            infile=self.infile, outfile=self.result_file,
+            infile=self.infile, outfile=self.resultfile,
             statusfile=self.statusfile)
-        for i in range(self.task.max_splits):
+        for i in range(self.task.max_jobs):
             jobs.append(Job(
-                str(i), self._submit, code, [self.infile], [self.result_file]))
+                str(i), self._submit, code, [self.infile], [self.resultfile]))
 
         group = JobGroup('process', jobs)
         return group

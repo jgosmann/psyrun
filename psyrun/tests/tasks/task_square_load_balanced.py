@@ -1,10 +1,10 @@
 from psyrun import Param
-from psyrun.psydoit import LoadBalancingSubtaskCreator
+from psyrun.psydoit import LoadBalancingBackend
 
 
 pspace = Param(x=range(4))
-max_splits = 2
-method = LoadBalancingSubtaskCreator
+max_jobs = 2
+backend = LoadBalancingBackend
 
 
 def execute(x):
