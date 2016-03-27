@@ -61,6 +61,14 @@ class TestParam(object):
         assert space['b.x'] == [3, 3]
         assert space['b.y'] == [4, 5]
 
+    def test_hierarchical(self):
+        d1 = {'root.a': [1, 2], 'b': [3, 4]}
+        d2 = {'root.b': [5, 6]}
+        space = (Param.from_dict(d1) * Param.from_dict(d2)).build()
+        assert space['root.a'] == [1, 1, 2, 2]
+        assert space['b'] == [3, 3, 4, 4]
+        assert space['root.b'] == [5, 6, 5, 6]
+
 
 class TestProduct(object):
     def test_product(self):
