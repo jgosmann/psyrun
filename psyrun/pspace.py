@@ -275,6 +275,29 @@ class Sum(_PSpaceObj):
 
 
 def missing(minuend, subtrahend):
+    """Return set of parameter assignments missing from another set.
+
+    This differs from a simple subtraction by allowing additional keys in the
+    subtrahend, but no additional keys in the minuend.
+
+    Parameters
+    ----------
+    minuend : :class:`Param`
+        Parameter space with all assignments.
+    subtrahend : :class:`Param`
+        Parameter space with assignments to remove from the parameter space.
+
+    Returns
+    -------
+    :class:`Param`
+        The reduced parameter space.
+
+    Examples
+    --------
+    >>> from pprint import pprint
+    >>> pprint(missing(Param(a=[1, 2, 3]), Param(a=[2])).build())
+    {'a': [1, 3]}
+    """
     if len(subtrahend) <= 0:
         return minuend
     for k in minuend.keys():
