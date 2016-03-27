@@ -87,6 +87,22 @@ class _PSpaceObj(object):
     def __sub__(self, other):
         return Difference(self, other)
 
+    def __repr__(self):
+        keys = sorted(self.keys())
+        built = self.build()
+        return "{cls}.from_dict({{{params}}})".format(
+            cls=self.__class__.__name__,
+            params=", ".join(
+                "{k!r}: {v!r}".format(k=k, v=built[k]) for k in keys))
+
+    def __str__(self):
+        keys = sorted(self.keys())
+        built = self.build()
+        return "{cls}({params})".format(
+            cls=self.__class__.__name__,
+            params=", ".join(
+                "{k!s}={v!r}".format(k=k, v=built[k]) for k in keys))
+
 
 class Param(_PSpaceObj):
     """Constructs a simple parameter space from constructor arguments.

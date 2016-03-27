@@ -69,6 +69,14 @@ class TestParam(object):
         assert space['b'] == [3, 3, 4, 4]
         assert space['root.b'] == [5, 6, 5, 6]
 
+    def test_str(self):
+        p = Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})
+        assert str(p) == "Param(a=[1, 2], b.b=[3, 4])"
+
+    def test_rep(self):
+        p = Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})
+        assert repr(p) == "Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})"
+
 
 class TestProduct(object):
     def test_product(self):
