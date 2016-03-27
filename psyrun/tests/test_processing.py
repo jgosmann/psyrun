@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import NpzStore, H5Store
+from psyrun.store import NpzStore, H5Store
 from psyrun.pspace import Param
 from psyrun.processing import Splitter, Worker, LoadBalancingWorker
 

@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from psyrun.io import H5Store, NpzStore
+from psyrun.store import H5Store, NpzStore
 from psyrun.pspace import Param
 
 

@@ -4,7 +4,7 @@ import fcntl
 import os
 import os.path
 
-from psyrun.io import NpzStore
+from psyrun.store import NpzStore
 from psyrun.mapper import map_pspace, map_pspace_hdd_backed
 from psyrun.pspace import dict_concat, Param
 

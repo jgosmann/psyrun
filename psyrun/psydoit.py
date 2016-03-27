@@ -12,7 +12,7 @@ from doit.task import dict_to_task
 from doit.cmd_base import Command, TaskLoader
 from doit.doit_cmd import DoitMain
 
-from psyrun.io import NpzStore
+from psyrun.store import NpzStore
 from psyrun.pspace import Param
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun

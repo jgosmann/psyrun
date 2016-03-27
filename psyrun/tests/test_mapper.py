@@ -2,7 +2,7 @@ import os.path
 
 import pytest
 
-from psyrun.io import H5Store, NpzStore
+from psyrun.store import H5Store, NpzStore
 from psyrun.pspace import Param
 from psyrun.mapper import (
     map_pspace, map_pspace_parallel, map_pspace_hdd_backed)

@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from psyrun.io import H5Store, NpzStore
+from psyrun.store import H5Store, NpzStore
 from psyrun.psydoit import TaskDef, Config, psydoit
 from psyrun.mockscheduler import MockScheduler
 
