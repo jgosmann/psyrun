@@ -90,16 +90,14 @@ class _PSpaceObj(object):
     def __repr__(self):
         keys = sorted(self.keys())
         built = self.build()
-        return "{cls}.from_dict({{{params}}})".format(
-            cls=self.__class__.__name__,
+        return "Param.from_dict({{{params}}})".format(
             params=", ".join(
                 "{k!r}: {v!r}".format(k=k, v=built[k]) for k in keys))
 
     def __str__(self):
         keys = sorted(self.keys())
         built = self.build()
-        return "{cls}({params})".format(
-            cls=self.__class__.__name__,
+        return "Param({params})".format(
             params=", ".join(
                 "{k!s}={v!r}".format(k=k, v=built[k]) for k in keys))
 
