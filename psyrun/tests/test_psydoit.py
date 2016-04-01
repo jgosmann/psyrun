@@ -106,7 +106,7 @@ def test_psydoit_h5_backend(taskenv):
 
 
 def test_psydoit_workdir_contents(taskenv):
-    workdir = os.path.join('psywork', 'square')
+    workdir = os.path.join('psy-work', 'square')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
     assert os.path.exists(os.path.join(workdir, 'in', '0.npz'))
@@ -121,7 +121,7 @@ def test_psydoit_workdir_contents(taskenv):
 
 
 def test_psydoit_workdir_contents_load_balanced(taskenv):
-    workdir = os.path.join('psywork', 'square_load_balanced')
+    workdir = os.path.join('psy-work', 'square_load_balanced')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
     psydoit(
         taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_load_balanced'])
