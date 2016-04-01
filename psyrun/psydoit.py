@@ -104,7 +104,7 @@ class Config(object):
         'store']
 
     def __init__(self):
-        self.workdir = os.path.abspath('psywork')
+        self.workdir = os.path.abspath('psy-work')
         self.resultfile = None
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
