@@ -136,6 +136,7 @@ class H5Store(AbstractStore):
         import tables
         with tables.open_file(filename, 'w') as h5:
             for k, v in data.items():
+                self._ensure_supported(v)
                 h5.create_array(self.node, k, v, createparents=True)
 
     def load(self, filename, row=None):
@@ -149,6 +150,7 @@ class H5Store(AbstractStore):
         import tables
         with tables.open_file(filename, 'a') as h5:
             for k, v in data.items():
+                self._ensure_supported(v)
                 shape = _min_shape(np.asarray(x).shape for x in v)
                 try:
                     node = h5.get_node(self.node, k)
@@ -160,7 +162,8 @@ class H5Store(AbstractStore):
                 else:
                     shape = _min_shape((shape, node.shape[1:]))
                     v = _match_shape(v, shape)
-                    if shape == node.shape[1:]:
+                    if (shape == node.shape[1:] and
+                            not isinstance(node.atom, tables.StringAtom)):
                         node.append(v)
                     else:
                         tmp_node = self._get_tmp_node_name(h5)
@@ -171,6 +174,13 @@ class H5Store(AbstractStore):
                             new_node.append(_match_shape([row], shape))
                         new_node.append(v)
                         h5.move_node(tmp_node, self.node, k, k, overwrite=True)
+
+    @classmethod
+    def _ensure_supported(cls, v):
+        dtype = np.asarray(v).dtype
+        if dtype.kind in 'OSU':
+            raise NotImplementedError(
+                "H5Store does not support dtype {}.".format(dtype))
 
     @staticmethod
     def _get_tmp_node_name(h5):
@@ -186,14 +196,18 @@ def _min_shape(args):
 
 def _match_shape(a, shape):
     a = np.asarray(a)
+    if a.shape == ():
+        a = np.asarray([a])
     if a.shape[1:] == shape:
         return a
 
     dtype = a.dtype
-    if not np.issubdtype(dtype, float):
-        dtype = float
     matched = np.empty((a.shape[0],) + shape, dtype=dtype)
-    matched.fill(np.nan)
+    if np.issubdtype(dtype, float) or np.issubdtype(dtype, complex):
+        matched.fill(np.nan)
+    elif dtype.kind == 'S':
+        matched.fill('')
+    # FIXME warning if no nan supported but missing values
 
     matched[np.ix_(*(range(x) for x in a.shape))] = a
     return matched
