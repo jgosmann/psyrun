@@ -47,8 +47,10 @@ class Splitter(object):
     @property
     def n_splits(self):
         """Number of total splits that will be generated."""
-        return min(
-            self.max_splits, (len(self.pspace) - 1) // self.min_items + 1)
+        n_splits = (len(self.pspace) - 1) // self.min_items + 1
+        if self.max_splits is not None:
+            n_splits = min(self.max_splits, n_splits)
+        return n_splits
 
     def split(self):
         """Perform splitting of parameters space and save input files for
@@ -56,8 +58,10 @@ class Splitter(object):
         items_remaining = len(self.pspace)
         param_iter = self.pspace.iterate()
         for i, filename in enumerate(self._iter_filenames()):
-            split_size = max(
-                self.min_items, items_remaining // (self.max_splits - i))
+            split_size = self.min_items
+            if self.max_splits is not None:
+                split_size = max(
+                    split_size, items_remaining // (self.max_splits - i))
             items_remaining -= split_size
             block = dict_concat(
                 [row for row in self._iter_n(param_iter, split_size)])
