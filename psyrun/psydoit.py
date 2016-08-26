@@ -641,7 +641,7 @@ class Test(Command):
         for t in PackageLoader('psy-tasks').load_task_defs():
             if len(pos_args) <= 0 or t.name in pos_args:
                 print(t.name)
-                t.execute(**t.pspace.iterate().next())
+                t.execute(**next(t.pspace.iterate()))
 
 
 class PsyDoit(DoitMain):
