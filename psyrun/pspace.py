@@ -3,6 +3,7 @@
 import itertools
 
 import numpy as np
+from six import string_types
 
 
 def dict_concat(args):
@@ -120,6 +121,11 @@ class Param(_PSpaceObj):
     def __init__(self, **params):
         super(Param, self).__init__(params.keys())
         self._params = params
+
+        # Make sure strings etc are in a list.
+        for k in self._params:
+            if isinstance(self._params[k], string_types + (bytes,)):
+                self._params[k] = [self._params[k]]
 
         self._len = None
         for v in self._params.values():

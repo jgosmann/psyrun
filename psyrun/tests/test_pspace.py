@@ -38,6 +38,10 @@ class TestParam(object):
         assert space['a'] == [1]
         assert space['b'] == [2]
 
+    def test_treats_string_not_as_sequence(self):
+        assert Param(a='item').build()['a'] == ['item']
+        assert Param(a=['item']).build()['a'] == ['item']
+
     def test_scalars_are_broadcasted(self):
         space = Param(a=[1, 2], b=3).build()
         assert sorted(space['a']) == [1, 2]

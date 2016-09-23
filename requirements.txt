@@ -5,4 +5,5 @@ numpy
 numexpr
 pytest
 pytest-cov
+six
 tables
