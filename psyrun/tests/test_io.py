@@ -2,11 +2,11 @@ import pytest
 
 import numpy as np
 
-from psyrun.store import H5Store, NpzStore
+from psyrun.store import H5Store, NpzStore, PickleStore
 from psyrun.pspace import Param
 
 
-@pytest.mark.parametrize('store', [H5Store(), NpzStore()])
+@pytest.mark.parametrize('store', [H5Store(), NpzStore(), PickleStore()])
 class TestDictStores(object):
     def test_infile_with_none(self, store, tmpdir):
         filename = str(tmpdir.join('infile' + store.ext))
@@ -36,7 +36,8 @@ class TestDictStores(object):
         store.append(filename, data2)
 
         saved = store.load(filename)
-        assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
+        assert np.all(
+            np.concatenate([data1['a'], data2['a']]) == np.asarray(saved['a']))
 
     def test_merging_results_with_varying_dimensionality(self, store, tmpdir):
         filename = str(tmpdir.join('r' + store.ext))
@@ -52,12 +53,12 @@ class TestDictStores(object):
         store.append(filename, data2)
 
         saved = store.load(filename)
-        assert expected.shape == saved['a'].shape
-        for a, b in zip(expected.flat, saved['a'].flat):
-            assert a == b or (np.isnan(a) and np.isnan(b))
+        assert np.all(saved['a'][0][:1, :2] == data1['a'][0])
+        assert np.all(saved['a'][1][:2, :1] == data2['a'][0])
+        assert np.all(saved['a'][2][:2, :1] == data2['a'][1])
 
 
-@pytest.mark.parametrize('store', [NpzStore()])
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore()])
 class TestStringStoring(object):
     def test_saves_single_strings(self, store, tmpdir):
         filename = str(tmpdir.join('r' + store.ext))

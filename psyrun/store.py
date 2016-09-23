@@ -2,7 +2,10 @@
 
 import errno
 
+# FIXME shouldn't be a dependency?
 import numpy as np
+from six import string_types
+from six.moves import cPickle as pickle
 
 
 class AbstractStore(object):
@@ -60,6 +63,51 @@ class AbstractStore(object):
             Dictionary with data to append.
         """
         raise NotImplementedError()
+
+
+class PickleStore(AbstractStore):
+    """Store using Python pickle `.pkl` files."""
+
+    ext = '.pkl'
+
+    def __init__(self, protocol=pickle.HIGHEST_PROTOCOL):
+        self.protocol = protocol
+
+    def save(self, filename, data):
+        with open(filename, 'wb') as f:
+            pickle.dump(data, f, self.protocol)
+
+    def load(self, filename, row=None):
+        with open(filename, 'rb') as f:
+            data = pickle.load(f)
+        if row is None:
+            return data
+        else:
+            return {k: [v[row]] for k, v in data.items()}
+
+    def append(self, filename, data):
+        try:
+            loaded = self.load(filename)
+        except IOError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            self.save(filename, data)
+        else:
+            keys = set(loaded.keys())
+            keys = keys.union(data.keys())
+
+            for k in keys:
+                if k not in loaded:
+                    n = max(len(v) for v in loaded.values())
+                    loaded[k] = [None] * k
+                if not isinstance(loaded[k], list):
+                    loaded[k] = list(loaded[k])
+                v = data.get(k, [None])
+                if isinstance(v, string_types + (bytes,)):
+                    v = [v]
+                loaded[k].extend(v)
+
+            self.save(filename, loaded)
 
 
 class NpzStore(AbstractStore):
@@ -205,7 +253,7 @@ def _match_shape(a, shape):
     matched = np.empty((a.shape[0],) + shape, dtype=dtype)
     if np.issubdtype(dtype, float) or np.issubdtype(dtype, complex):
         matched.fill(np.nan)
-    elif dtype.kind == 'S':
+    elif dtype.kind == 'S':  # FIXME bytes and unicode?
         matched.fill('')
     # FIXME warning if no nan supported but missing values
 
