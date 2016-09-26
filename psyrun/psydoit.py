@@ -582,6 +582,11 @@ class LoadBalancingBackend(AbstractBackend):
         return os.path.join(self.workdir, 'status')
 
     @property
+    def partial_resultfile(self):
+        root, ext = os.path.splitext(self.resultfile)
+        return root + '.part' + ext
+
+    @property
     def resultfile(self):
         if self.task.resultfile:
             return self.task.resultfile
@@ -591,7 +596,8 @@ class LoadBalancingBackend(AbstractBackend):
     def create_job(self):
         pspace = self.create_pspace_job()
         process = self.create_process_job()
-        return JobChain(self.task.name, [pspace, process])
+        finalize = self.create_finalize_job()
+        return JobChain(self.task.name, [pspace, process, finalize])
 
     def create_pspace_job(self):
         code = '''
@@ -621,14 +627,24 @@ from psyrun.processing import LoadBalancingWorker
 LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.store).start(
     task.execute)
         '''.format(
-            infile=self.infile, outfile=self.resultfile,
+            infile=self.infile, outfile=self.partial_resultfile,
             statusfile=self.statusfile)
         for i in range(self.task.max_jobs):
             jobs.append(Job(
-                str(i), self._submit, code, [self.infile], [self.resultfile]))
+                str(i), self._submit, code, [self.infile],
+                [self.partial_resultfile]))
 
         group = JobGroup('process', jobs)
         return group
+
+    def create_finalize_job(self):
+        code = '''
+import os
+os.rename({part!r}, {whole!r})
+        '''.format(part=self.partial_resultfile, whole=self.resultfile)
+        return Job(
+            'finalize', self._submit, code, [self.partial_resultfile],
+            [self.resultfile])
 
 
 def psydoit(taskdir, argv=sys.argv[1:]):
