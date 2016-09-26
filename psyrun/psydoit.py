@@ -26,6 +26,9 @@ class JobsRunningWarning(UserWarning):
             "until these are finished or have been killed.".format(name))
 
 
+warnings.simplefilter('always', category=UserWarning)
+
+
 class TaskDef(object):
     """Task defined by a Python file.
 
