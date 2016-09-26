@@ -6,7 +6,7 @@ import time
 import pytest
 
 from psyrun.store import H5Store, NpzStore
-from psyrun.psydoit import TaskDef, Config, psydoit
+from psyrun.psydoit import TaskDef, Config, JobsRunningWarning, psydoit
 from psyrun.mockscheduler import MockScheduler
 
 
@@ -232,6 +232,25 @@ def test_psydoit_resubmits_jobs_if_necessary(taskenv, scheduler):
     for i in range(4):
         assert 'process:{0}'.format(i) in scheduler.joblist[i + 1]['name']
     assert 'merge' in scheduler.joblist[5]['name']
+
+
+def test_psydoit_shows_error_if_resubmit_of_queded_job_necessary(
+        taskenv, scheduler):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    scheduler.consume_job(scheduler.joblist[0])
+    scheduler.consume_job(scheduler.joblist[1])
+    expected = scheduler.joblist
+    time.sleep(1)
+    t = time.time()
+    os.utime(
+        os.path.join(taskenv.taskdir, 'task_mocked_scheduler.py'),
+        (t, t))
+
+    with pytest.warns(JobsRunningWarning):
+        psydoit(
+            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    assert len(expected) == len(scheduler.joblist)
+    assert all(x['id'] == y['id'] for x, y in zip(expected, scheduler.joblist))
 
 
 def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):

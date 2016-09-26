@@ -19,6 +19,13 @@ from psyrun.scheduler import ImmediateRun
 from psyrun.venv import init_virtualenv
 
 
+class JobsRunningWarning(UserWarning):
+    def __init__(self, name):
+        super(UserWarning, self).__init__(
+            "Task '{}' has unfinished jobs queued. Not starting new jobs "
+            "until these are finished or have been killed.".format(name))
+
+
 class TaskDef(object):
     """Task defined by a Python file.
 
@@ -338,13 +345,24 @@ class Fullname(JobTreeVisitor):
 
 
 class Uptodate(JobTreeVisitor):
-    def __init__(self, jobtree, names, scheduler):
+    def __init__(self, jobtree, names, task):
         super(Uptodate, self).__init__()
         self.names = names
-        self.scheduler = scheduler
+        self.task = task
         self.status = {}
         self.clamp = None
+
+        self.any_queued = False
+        self.outdated = False
+
         self.visit(jobtree)
+        self.post_visit()
+
+    def post_visit(self):
+        if self.any_queued and self.outdated:
+            for k in self.status.keys():
+                self.status[k] = True
+            warnings.warn(JobsRunningWarning(self.task.name))
 
     def visit_job(self, job):
         if self.is_job_queued(job):
@@ -390,13 +408,17 @@ class Uptodate(JobTreeVisitor):
 
     def is_job_queued(self, job):
         job_names = [
-            self.scheduler.get_status(j).name
-            for j in self.scheduler.get_jobs()]
-        return self.names[job] in job_names
+            self.task.scheduler.get_status(j).name
+            for j in self.task.scheduler.get_jobs()]
+        is_queued = self.names[job] in job_names
+        self.any_queued |= is_queued
+        return is_queued
 
     def files_uptodate(self, tref, targets):
-        return all(
+        uptodate = all(
             self._is_newer_than_tref(target, tref) for target in targets)
+        self.outdated |= not uptodate
+        return uptodate
 
     def _get_tref(self, dependencies):
         tref = 0
@@ -475,7 +497,7 @@ task = TaskDef({taskpath!r})
         job = self.create_job()
         names = Fullname(job).names
         return ToDoitTask(names, Uptodate(
-            job, names, self.task.scheduler).status).visit(job)
+            job, names, self.task).status).visit(job)
 
     def create_job(self):
         raise NotImplementedError()
