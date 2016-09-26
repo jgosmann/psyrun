@@ -256,7 +256,7 @@ class Sqsub(Scheduler):
                 stdout = subprocess.check_output(
                     ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
                 for line in stdout.split(os.linesep)[2:]:
-                    cols = line.split(None, 6)
+                    cols = line.split(None, 5)
                     if len(cols) > 3 and int(cols[0]) == jobid:
                         if cols[2] == 'C':
                             cols[2] = 'D'
@@ -283,7 +283,7 @@ class Sqsub(Scheduler):
         self._jobs = {}
         stdout = subprocess.check_output(['sqjobs'])
         for line in stdout.split(os.linesep)[2:]:
-            cols = line.split(None, 3)
+            cols = line.split(None, 5)
             if len(cols) > 2 and cols[2] in ['Q', '*Q', 'Z']:
                 jobid = int(cols[0])
                 self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
