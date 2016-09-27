@@ -83,19 +83,13 @@ def test_load_config_from_file(tmpdir):
     assert conf.python == 'env python'
 
 
-def test_psydoit(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
-    result = NpzStore().load(
-        os.path.join(taskenv.workdir, 'square', 'result.npz'))
-    assert sorted(result['y']) == [0, 1, 4, 9]
-
-
-def test_psydoit_load_balancing(taskenv):
-    psydoit(
-        taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_load_balanced'])
-    result = NpzStore().load(
-        os.path.join(taskenv.workdir, 'square_load_balanced', 'result.npz'))
-    assert sorted(result['y']) == [0, 1, 4, 9]
+@pytest.mark.parametrize('task', ['square', 'square_load_balanced'])
+class TestPsydoit(object):
+    def test_psydoit(self, taskenv, task):
+        psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, task])
+        result = NpzStore().load(
+            os.path.join(taskenv.workdir, task, 'result.npz'))
+        assert sorted(result['y']) == [0, 1, 4, 9]
 
 
 def test_psydoit_h5_backend(taskenv):
