@@ -228,7 +228,7 @@ def test_psydoit_resubmits_jobs_if_necessary(taskenv, scheduler):
     assert 'merge' in scheduler.joblist[5]['name']
 
 
-def test_psydoit_shows_error_if_resubmit_of_queded_job_necessary(
+def test_psydoit_shows_error_if_resubmit_of_queued_job_necessary(
         taskenv, scheduler):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     scheduler.consume_job(scheduler.joblist[0])
