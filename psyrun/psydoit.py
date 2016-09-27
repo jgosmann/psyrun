@@ -21,9 +21,18 @@ from psyrun.venv import init_virtualenv
 
 class JobsRunningWarning(UserWarning):
     def __init__(self, name):
+        self.task = name
         super(UserWarning, self).__init__(
             "Task '{}' has unfinished jobs queued. Not starting new jobs "
             "until these are finished or have been killed.".format(name))
+
+
+class TaskWorkdirDirtyWarning(UserWarning):
+    def __init__(self, name):
+        # TODO explain how to solve this
+        self.task = name
+        super(UserWarning, self).__init__(
+            "Work directory of task '{}' is dirty.".format(name))
 
 
 warnings.simplefilter('always', category=UserWarning)
@@ -111,7 +120,7 @@ class Config(object):
     __slots__ = [
         'workdir', 'resultfile', 'scheduler', 'pspace', 'backend',
         'scheduler_args', 'python', 'max_jobs', 'min_items', 'file_dep',
-        'store']
+        'store', 'overwrite_dirty']
 
     def __init__(self):
         self.workdir = os.path.abspath('psy-work')
@@ -125,6 +134,7 @@ class Config(object):
         self.backend = DistributeBackend
         self.file_dep = []
         self.store = NpzStore()
+        self.overwrite_dirty = True
 
     @classmethod
     def load_from_file(cls, filename):
@@ -198,7 +208,7 @@ class PackageLoader(TaskLoader):
     def create_task(self, task):
         group_task = dict_to_task({
             'name': task.name,
-            'actions': None
+            'actions': None,
         })
         group_task.has_subtask = True
 
@@ -265,12 +275,22 @@ class JobTreeVisitor(object):
 
 
 class ToDoitTask(JobTreeVisitor):
-    def __init__(self, names, uptodate):
+    def __init__(self, task, names, uptodate):
         super(ToDoitTask, self).__init__()
+        self.task = task
         self.names = names
         self.uptodate = uptodate
         self.task_dep = []
         self.getargs = {}
+
+    def clean_job(self, job):
+        workdir = os.path.join(self.task.workdir, self.task.name)
+        for item in os.listdir(workdir):
+            if item.startswith(self.names[job]):
+                os.remove(os.path.join(workdir, item))
+        for t in job.targets:
+            if os.path.exists(t):
+                os.remove(t)
 
     def visit_job(self, job):
         yield dict_to_task({
@@ -279,6 +299,7 @@ class ToDoitTask(JobTreeVisitor):
             'task_dep': self.task_dep,
             'getargs': self.getargs,
             'actions': [(job.submit_fn, [job.code, self.names[job]])],
+            'clean': [lambda: self.clean_job(job)],
         })
 
     def visit_group(self, group):
@@ -362,10 +383,28 @@ class Uptodate(JobTreeVisitor):
         self.post_visit()
 
     def post_visit(self):
+        skip = False
         if self.any_queued and self.outdated:
+            skip = True
+            warnings.warn(JobsRunningWarning(self.task.name))
+        elif self.outdated and not self._is_workdir_clean():
+            if not self.task.overwrite_dirty:
+                skip = True
+                warnings.warn(TaskWorkdirDirtyWarning(self.task.name))
+
+        if skip:
             for k in self.status.keys():
                 self.status[k] = True
-            warnings.warn(JobsRunningWarning(self.task.name))
+
+    def _is_workdir_clean(self):
+        workdir = os.path.join(self.task.workdir, self.task.name)
+        if not os.path.exists(workdir):
+            return True
+        else:
+            for dirpath, dirnames, filenames in os.walk(workdir):
+                if len(filenames) > 0:
+                    return False
+            return True
 
     def visit_job(self, job):
         if self.is_job_queued(job):
@@ -499,7 +538,7 @@ task = TaskDef({taskpath!r})
     def create_subtasks(self):
         job = self.create_job()
         names = Fullname(job).names
-        return ToDoitTask(names, Uptodate(
+        return ToDoitTask(self.task, names, Uptodate(
             job, names, self.task).status).visit(job)
 
     def create_job(self):

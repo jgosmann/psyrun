@@ -6,7 +6,8 @@ import time
 import pytest
 
 from psyrun.store import H5Store, NpzStore
-from psyrun.psydoit import TaskDef, Config, JobsRunningWarning, psydoit
+from psyrun.psydoit import (
+    TaskDef, Config, JobsRunningWarning, psydoit, TaskWorkdirDirtyWarning)
 from psyrun.mockscheduler import MockScheduler
 
 
@@ -97,6 +98,35 @@ def test_psydoit_h5_backend(taskenv):
     result = H5Store().load(
         os.path.join(taskenv.workdir, 'square_h5', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+def test_fails_for_existing_old_results_by_default(taskenv):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    # Still up to date, not warning
+    with pytest.warns(None) as record:
+        psydoit(
+            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    for w in record:
+        assert not issubclass(w.category, TaskWorkdirDirtyWarning)
+    time.sleep(1)
+    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
+    with pytest.warns(TaskWorkdirDirtyWarning):
+        psydoit(
+            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+
+
+def test_allows_to_clean_results(taskenv):
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    time.sleep(1)
+    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
+    psydoit(
+        taskenv.taskdir,
+        ['clean', '-c', '--db-file', taskenv.dbfile, 'square'])
+    with pytest.warns(None) as record:
+        psydoit(
+            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    for w in record:
+        assert not issubclass(w.category, TaskWorkdirDirtyWarning)
 
 
 def test_psydoit_workdir_contents(taskenv):
