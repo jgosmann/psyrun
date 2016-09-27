@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import argparse
 import itertools
 import os
 import os.path
@@ -7,10 +8,6 @@ import re
 import sys
 import traceback
 import warnings
-
-from doit.task import dict_to_task
-from doit.cmd_base import Command, TaskLoader
-from doit.doit_cmd import DoitMain
 
 from psyrun.store import NpzStore
 from psyrun.pspace import Param
@@ -164,8 +161,8 @@ class Config(object):
                 setattr(task, attr, getattr(self, attr))
 
 
-class PackageLoader(TaskLoader):
-    """Loads doit tasks from Python files.
+class PackageLoader(object):
+    """Loads tasks from Python files.
 
     Filenames have to match the regex defined in
     :const:`.TaskDef.TASK_PATTERN`.  See :class:`.Config` for supported module
@@ -206,14 +203,8 @@ class PackageLoader(TaskLoader):
         return task_list, {}
 
     def create_task(self, task):
-        group_task = dict_to_task({
-            'name': task.name,
-            'actions': None,
-        })
-        group_task.has_subtask = True
-
         creator = task.backend(task)
-        return creator.create_subtasks()
+        return creator.create_job()
 
 
 class Job(object):
@@ -274,16 +265,42 @@ class JobTreeVisitor(object):
         return self._dispatcher[job.__class__](job)
 
 
-class ToDoitTask(JobTreeVisitor):
-    def __init__(self, task, names, uptodate):
-        super(ToDoitTask, self).__init__()
-        self.task = task
+class Submit(JobTreeVisitor):
+    def __init__(self, job, names, uptodate):
+        super(Submit, self).__init__()
         self.names = names
         self.uptodate = uptodate
-        self.task_dep = []
-        self.getargs = {}
+        self.depends_on = []
+        self.visit(job)
 
-    def clean_job(self, job):
+    def visit_job(self, job):
+        if self.uptodate.status[job]:
+            return []
+        return [job.submit_fn(
+            job.code, self.names[job], depends_on=self.depends_on)]
+
+    def visit_group(self, group):
+        return sum((self.visit(job) for job in group.jobs), [])
+
+    def visit_chain(self, chain):
+        old_depends_on = self.depends_on
+        job_ids = []
+        for job in chain.jobs:
+            ids = self.visit(job)
+            job_ids.extend(ids)
+            self.depends_on = old_depends_on + ids
+        self.depends_on = old_depends_on
+        return job_ids
+
+
+class Clean(JobTreeVisitor):
+    def __init__(self, job, task, names):
+        super(Submit, self).__init__()
+        self.task = task
+        self.names = names
+        self.visit(job)
+
+    def visit_job(self, job):
         workdir = os.path.join(self.task.workdir, self.task.name)
         for item in os.listdir(workdir):
             if item.startswith(self.names[job]):
@@ -291,59 +308,6 @@ class ToDoitTask(JobTreeVisitor):
         for t in job.targets:
             if os.path.exists(t):
                 os.remove(t)
-
-    def visit_job(self, job):
-        yield dict_to_task({
-            'name': self.names[job],
-            'uptodate': [lambda: self.uptodate[job]],
-            'task_dep': self.task_dep,
-            'getargs': self.getargs,
-            'actions': [(job.submit_fn, [job.code, self.names[job]])],
-            'clean': [lambda: self.clean_job(job)],
-        })
-
-    def visit_group(self, group):
-        subtasks = itertools.chain.from_iterable(
-            self.visit(job) for job in group.jobs)
-
-        task_dict = {
-            'name': self.names[group],
-            'uptodate': [lambda: self.uptodate[group]],
-            'task_dep': [self.names[job] for job in group.jobs],
-            'actions': [],
-        }
-
-        task = dict_to_task(task_dict)
-        task.has_subtask = True
-        yield task
-        for task in subtasks:
-            task.is_subtask = True
-            yield task
-
-    def visit_chain(self, chain):
-        subtasks = []
-        old_task_dep = self.task_dep
-        old_getargs = self.getargs
-        for job in chain.jobs:
-            subtasks.extend(self.visit(job))
-            self.task_dep = old_task_dep + [self.names[job]]
-            self.getargs = {'depends_on': (self.names[job], 'id')}
-        self.task_dep = old_task_dep
-        self.getargs = old_getargs
-
-        task_dict = {
-            'name': self.names[chain],
-            'uptodate': [lambda: self.uptodate[chain]],
-            'task_dep': [self.names[job] for job in chain.jobs],
-            'actions': [],
-        }
-
-        task = dict_to_task(task_dict)
-        task.has_subtask = True
-        yield task
-        for task in subtasks:
-            task.is_subtask = True
-            yield task
 
 
 class Fullname(JobTreeVisitor):
@@ -535,11 +499,11 @@ task = TaskDef({taskpath!r})
             [self.task.python, codefile], output_filename, name, depends_on,
             self.task.scheduler_args)}
 
-    def create_subtasks(self):
-        job = self.create_job()
-        names = Fullname(job).names
-        return ToDoitTask(self.task, names, Uptodate(
-            job, names, self.task).status).visit(job)
+    # def create_subtasks(self):
+        # job = self.create_job()
+        # names = Fullname(job).names
+        # return ToDoitTask(self.task, names, Uptodate(
+            # job, names, self.task).status).visit(job)
 
     def create_job(self):
         raise NotImplementedError()
@@ -710,19 +674,57 @@ def psydoit(taskdir, argv=sys.argv[1:]):
     return PsyDoit(PackageLoader(taskdir)).run(argv)
 
 
-class Test(Command):
-    doc_purpose = "Test task by running it immediately for one parameter set."
-    doc_usage = "[TASK ...]"
-    doc_description = None
+# class Test(Command):
+    # doc_purpose = "Test task by running it immediately for one parameter set."
+    # doc_usage = "[TASK ...]"
+    # doc_description = None
 
-    cmd_options = ()
+    # cmd_options = ()
 
-    def execute(self, opt_values, pos_args):
-        for t in PackageLoader('psy-tasks').load_task_defs():
-            if len(pos_args) <= 0 or t.name in pos_args:
-                print(t.name)
-                t.execute(**next(t.pspace.iterate()))
+    # def execute(self, opt_values, pos_args):
+        # for t in PackageLoader('psy-tasks').load_task_defs():
+            # if len(pos_args) <= 0 or t.name in pos_args:
+                # print(t.name)
+                # t.execute(**next(t.pspace.iterate()))
 
 
-class PsyDoit(DoitMain):
-    DOIT_CMDS = DoitMain.DOIT_CMDS + (Test,)
+class PsyDoit(object):
+    def __init__(self, package_loader):
+        self.package_loader = package_loader
+
+    def run(self, argv):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('cmd', nargs='?', default=['run'], type=str)
+        parser.add_argument('--db-file', nargs=1, type=str)
+        parser.add_argument('args', nargs=argparse.REMAINDER)
+        args = parser.parse_args(argv)
+
+        if args.cmd == 'run':
+            self.cmd_run(args.args)
+        elif args.cmd == 'clean':
+            self.cmd_clean(args.args)
+        else:
+            self.cmd_run([args.cmd] + args.args)
+
+    def cmd_run(self, argv):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('tasks', nargs='*', type=str)
+        args = parser.parse_args(argv)
+
+        for t in self.package_loader.load_task_defs():
+            if t.name in args.tasks:
+                backend = t.backend(t)
+                job = backend.create_job()
+                names = Fullname(job).names
+                uptodate = Uptodate(job, names, t)
+                Submit(job, names, uptodate)
+
+    def cmd_clean(self, argv):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('tasks', nargs='*', type=str)
+        args = parser.parse_args(argv)
+
+        for t in self.package_loader.load_task_defs():
+            if t.name in args.tasks:
+                import shutil
+                shutil.rmtree(os.path.join(t.workdir, t.name))

@@ -119,9 +119,7 @@ def test_allows_to_clean_results(taskenv):
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
     time.sleep(1)
     os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
-    psydoit(
-        taskenv.taskdir,
-        ['clean', '-c', '--db-file', taskenv.dbfile, 'square'])
+    psydoit(taskenv.taskdir, ['clean', 'square'])
     with pytest.warns(None) as record:
         psydoit(
             taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
@@ -237,9 +235,10 @@ def test_psydoit_does_not_resubmit_split_if_infiles_uptodate(
                 continue
             os.remove(os.path.join(dirpath, filename))
 
-    psydoit(taskenv.taskdir, [
-        'list', '-s', '--all', '--db-file', taskenv.dbfile,
-        'mocked_scheduler'])
+    # FIXME list command
+    # psydoit(taskenv.taskdir, [
+        # 'list', '-s', '--all', '--db-file', taskenv.dbfile,
+        # 'mocked_scheduler'])
     psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
     for job in scheduler.joblist:
         assert 'split' not in job['name']
@@ -344,5 +343,6 @@ def test_multiple_splits(taskenv):
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
+# FIXME no asserts?
 def test_working_directory(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, '-v', '2', 'workingdir'])
+    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'workingdir'])
