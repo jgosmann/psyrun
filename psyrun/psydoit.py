@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import argparse
 import itertools
 import os
 import os.path
@@ -13,7 +12,6 @@ from psyrun.store import NpzStore
 from psyrun.pspace import Param
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
-from psyrun.venv import init_virtualenv
 
 
 class JobsRunningWarning(UserWarning):
@@ -275,9 +273,12 @@ class Submit(JobTreeVisitor):
 
     def visit_job(self, job):
         if self.uptodate.status[job]:
+            print('-', self.names[job])
             return []
-        return [job.submit_fn(
-            job.code, self.names[job], depends_on=self.depends_on)]
+        else:
+            print('.', self.names[job])
+            return [job.submit_fn(
+                job.code, self.names[job], depends_on=self.depends_on)]
 
     def visit_group(self, group):
         return sum((self.visit(job) for job in group.jobs), [])
@@ -651,80 +652,3 @@ os.rename({part!r}, {whole!r})
         return Job(
             'finalize', self._submit, code, [self.partial_resultfile],
             [self.resultfile])
-
-
-def psydoit(taskdir, argv=sys.argv[1:]):
-    """Runs psy-doit tasks.
-
-    Parameters
-    ----------
-    taskdir : str
-        Path to directory with task definition files.
-    argv : sequence of str
-        psy-doit command line arguments.
-
-    Returns
-    -------
-    int
-        Return code. See the `doit documentation
-        <http://pydoit.org/api/doit.doit_cmd.DoitMain-class.html#run>`_ for
-        more details.
-    """
-    init_virtualenv()
-    return PsyDoit(PackageLoader(taskdir)).run(argv)
-
-
-# class Test(Command):
-    # doc_purpose = "Test task by running it immediately for one parameter set."
-    # doc_usage = "[TASK ...]"
-    # doc_description = None
-
-    # cmd_options = ()
-
-    # def execute(self, opt_values, pos_args):
-        # for t in PackageLoader('psy-tasks').load_task_defs():
-            # if len(pos_args) <= 0 or t.name in pos_args:
-                # print(t.name)
-                # t.execute(**next(t.pspace.iterate()))
-
-
-class PsyDoit(object):
-    def __init__(self, package_loader):
-        self.package_loader = package_loader
-
-    def run(self, argv):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('cmd', nargs='?', default=['run'], type=str)
-        parser.add_argument('--db-file', nargs=1, type=str)
-        parser.add_argument('args', nargs=argparse.REMAINDER)
-        args = parser.parse_args(argv)
-
-        if args.cmd == 'run':
-            self.cmd_run(args.args)
-        elif args.cmd == 'clean':
-            self.cmd_clean(args.args)
-        else:
-            self.cmd_run([args.cmd] + args.args)
-
-    def cmd_run(self, argv):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('tasks', nargs='*', type=str)
-        args = parser.parse_args(argv)
-
-        for t in self.package_loader.load_task_defs():
-            if t.name in args.tasks:
-                backend = t.backend(t)
-                job = backend.create_job()
-                names = Fullname(job).names
-                uptodate = Uptodate(job, names, t)
-                Submit(job, names, uptodate)
-
-    def cmd_clean(self, argv):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('tasks', nargs='*', type=str)
-        args = parser.parse_args(argv)
-
-        for t in self.package_loader.load_task_defs():
-            if t.name in args.tasks:
-                import shutil
-                shutil.rmtree(os.path.join(t.workdir, t.name))
