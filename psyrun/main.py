@@ -3,7 +3,7 @@ import os.path
 import shutil
 
 from psyrun.processing import Splitter
-from psyrun.psydoit import Fullname, PackageLoader, Submit, Uptodate
+from psyrun.tasks import Fullname, PackageLoader, Submit, Uptodate
 from psyrun.venv import init_virtualenv
 
 

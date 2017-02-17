@@ -1,5 +1,5 @@
 from psyrun import Param
-from psyrun.psydoit import LoadBalancingBackend
+from psyrun.tasks import LoadBalancingBackend
 
 
 pspace = Param(x=range(4))
