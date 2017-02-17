@@ -479,7 +479,7 @@ except:
 import os
 os.chdir({taskdir!r})
 
-from psyrun.psydoit import TaskDef
+from psyrun.tasks import TaskDef
 task = TaskDef({taskpath!r})
 {code}
         '''.format(

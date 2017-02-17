@@ -5,9 +5,10 @@ import time
 
 import pytest
 
+from psyrun.main import psy_main
 from psyrun.store import H5Store, NpzStore
 from psyrun.tasks import (
-    TaskDef, Config, JobsRunningWarning, psydoit, TaskWorkdirDirtyWarning)
+    TaskDef, Config, JobsRunningWarning, TaskWorkdirDirtyWarning)
 from psyrun.mockscheduler import MockScheduler
 
 
@@ -19,7 +20,6 @@ class TaskEnv(object):
         self.rootdir = str(tmpdir)
         self.taskdir = os.path.join(str(tmpdir), 'tasks')
         self.workdir = os.path.join(str(tmpdir), 'work')
-        self.dbfile = os.path.join(str(tmpdir), 'doit.db')
 
         shutil.copytree(TASKDIR, self.taskdir)
         with open(os.path.join(self.taskdir, 'psyconf.py'), 'w') as f:
@@ -85,52 +85,49 @@ def test_load_config_from_file(tmpdir):
 
 
 @pytest.mark.parametrize('task', ['square', 'square_load_balanced'])
-class TestPsydoit(object):
-    def test_psydoit(self, taskenv, task):
-        psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, task])
+class TestPsyrun(object):
+    def test_psyrun(self, taskenv, task):
+        psy_main(['run', '--taskdir', taskenv.taskdir, task])
         result = NpzStore().load(
             os.path.join(taskenv.workdir, task, 'result.npz'))
         assert sorted(result['y']) == [0, 1, 4, 9]
 
 
-def test_psydoit_h5_backend(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_h5'])
+def test_psyrun_h5_backend(taskenv):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square_h5'])
     result = H5Store().load(
         os.path.join(taskenv.workdir, 'square_h5', 'result.h5'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
 def test_fails_for_existing_old_results_by_default(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     # Still up to date, not warning
     with pytest.warns(None) as record:
-        psydoit(
-            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+        psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     for w in record:
         assert not issubclass(w.category, TaskWorkdirDirtyWarning)
     time.sleep(1)
     os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
     with pytest.warns(TaskWorkdirDirtyWarning):
-        psydoit(
-            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+        psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
 
 
 def test_allows_to_clean_results(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     time.sleep(1)
     os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
-    psydoit(taskenv.taskdir, ['clean', 'square'])
+    psy_main(['clean', '--taskdir', taskenv.taskdir, 'square'])
     with pytest.warns(None) as record:
-        psydoit(
-            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+        psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     for w in record:
         assert not issubclass(w.category, TaskWorkdirDirtyWarning)
 
 
-def test_psydoit_workdir_contents(taskenv):
+def test_psyrun_workdir_contents(taskenv):
     workdir = os.path.join('psy-work', 'square')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     assert os.path.exists(os.path.join(workdir, 'in', '0.npz'))
     assert os.path.exists(os.path.join(workdir, 'out', '0.npz'))
     assert os.path.exists(os.path.join(workdir, 'result.npz'))
@@ -142,11 +139,10 @@ def test_psydoit_workdir_contents(taskenv):
     assert os.path.exists(os.path.join(workdir, 'square:merge.log'))
 
 
-def test_psydoit_workdir_contents_load_balanced(taskenv):
+def test_psyrun_workdir_contents_load_balanced(taskenv):
     workdir = os.path.join('psy-work', 'square_load_balanced')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
-    psydoit(
-        taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square_load_balanced'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square_load_balanced'])
     assert os.path.exists(os.path.join(workdir, 'in.npz'))
     assert os.path.exists(os.path.join(workdir, 'result.npz'))
     assert os.path.exists(os.path.join(
@@ -161,10 +157,10 @@ def test_psydoit_workdir_contents_load_balanced(taskenv):
         workdir, 'square_load_balanced:process:1.log'))
 
 
-def test_psydoit_file_dep(taskenv):
+def test_psyrun_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'file_dep'])
     result = NpzStore().load(os.path.join(
         taskenv.workdir, 'file_dep', 'result.npz'))
     assert sorted(result['y']) == [4]
@@ -175,32 +171,32 @@ def test_psydoit_file_dep(taskenv):
 
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('3')
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'file_dep'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'file_dep'])
     result = NpzStore().load(os.path.join(
         taskenv.workdir, 'file_dep', 'result.npz'))
     assert sorted(result['y']) == [8]
 
 
-def test_psydoit_does_not_resubmit_queued_jobs(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_does_not_resubmit_queued_jobs(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     expected = scheduler.joblist
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(expected) == len(scheduler.joblist)
     assert all(x['id'] == y['id'] for x, y in zip(expected, scheduler.joblist))
 
 
-def test_psydoit_remerges_if_result_is_missing(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_remerges_if_result_is_missing(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
     assert 'merge' in scheduler.joblist[0]['name']
 
 
-def test_psydoit_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
@@ -208,26 +204,26 @@ def test_psydoit_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
                 continue
             os.remove(os.path.join(dirpath, filename))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 0
 
 
-def test_psydoit_resubmits_for_missing_job_output(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_resubmits_for_missing_job_output(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
     os.remove(os.path.join(
         taskenv.workdir, 'mocked_scheduler', 'out', '0.npz'))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 2
     assert 'process:0' in scheduler.joblist[0]['name']
     assert 'merge' in scheduler.joblist[1]['name']
 
 
-def test_psydoit_does_not_resubmit_split_if_infiles_uptodate(
+def test_psyrun_does_not_resubmit_split_if_infiles_uptodate(
         taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
@@ -236,20 +232,19 @@ def test_psydoit_does_not_resubmit_split_if_infiles_uptodate(
             os.remove(os.path.join(dirpath, filename))
 
     # FIXME list command
-    # psydoit(taskenv.taskdir, [
-        # 'list', '-s', '--all', '--db-file', taskenv.dbfile,
-        # 'mocked_scheduler'])
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    # psy_main(taskenv.taskdir, [
+        # 'list', '-s', '--all', 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     for job in scheduler.joblist:
         assert 'split' not in job['name']
 
 
-def test_psydoit_resubmits_jobs_if_necessary(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_resubmits_jobs_if_necessary(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     shutil.rmtree(taskenv.workdir)
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 6
     assert 'split' in scheduler.joblist[0]['name']
     for i in range(4):
@@ -257,9 +252,9 @@ def test_psydoit_resubmits_jobs_if_necessary(taskenv, scheduler):
     assert 'merge' in scheduler.joblist[5]['name']
 
 
-def test_psydoit_shows_error_if_resubmit_of_queued_job_necessary(
+def test_psyrun_shows_error_if_resubmit_of_queued_job_necessary(
         taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume_job(scheduler.joblist[0])
     scheduler.consume_job(scheduler.joblist[1])
     expected = scheduler.joblist
@@ -270,14 +265,13 @@ def test_psydoit_shows_error_if_resubmit_of_queued_job_necessary(
         (t, t))
 
     with pytest.warns(JobsRunningWarning):
-        psydoit(
-            taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+        psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(expected) == len(scheduler.joblist)
     assert all(x['id'] == y['id'] for x, y in zip(expected, scheduler.joblist))
 
 
-def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+def test_psyrun_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     time.sleep(1)
     t = time.time()
@@ -292,14 +286,14 @@ def test_psydoit_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
             taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.npz'),
             (t, t))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
     assert 'merge' in scheduler.joblist[0]['name']
 
 
-def test_psydoit_resubmits_process_and_merge_if_outfile_is_outdated(
+def test_psyrun_resubmits_process_and_merge_if_outfile_is_outdated(
         taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     time.sleep(1)
     t = time.time()
@@ -311,16 +305,16 @@ def test_psydoit_resubmits_process_and_merge_if_outfile_is_outdated(
             taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.npz'),
             (t, t))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 5
     for i in range(4):
         assert 'process:{0}'.format(i) in scheduler.joblist[i]['name']
     assert 'merge' in scheduler.joblist[4]['name']
 
 
-def test_psydoit_resubmits_all_if_infile_is_outdated(
+def test_psyrun_resubmits_all_if_infile_is_outdated(
         taskenv, scheduler):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
     time.sleep(1)
     t = time.time()
@@ -328,7 +322,7 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
         os.path.join(taskenv.taskdir, 'task_mocked_scheduler.py'),
         (t, t))
 
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'mocked_scheduler'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 6
     assert 'split' in scheduler.joblist[0]['name']
     for i in range(4):
@@ -337,7 +331,7 @@ def test_psydoit_resubmits_all_if_infile_is_outdated(
 
 
 def test_multiple_splits(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'square2'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square2'])
     result = NpzStore().load(os.path.join(
         taskenv.workdir, 'square2', 'result.npz'))
     assert sorted(result['y']) == [0, 1, 4, 9]
@@ -345,4 +339,4 @@ def test_multiple_splits(taskenv):
 
 # FIXME no asserts?
 def test_working_directory(taskenv):
-    psydoit(taskenv.taskdir, ['--db-file', taskenv.dbfile, 'workingdir'])
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'workingdir'])
