@@ -9,7 +9,7 @@ setup(
     author_email='jan@hyper-world.de',
     packages=['psyrun'],
     provides=['psyrun'],
-    install_requires=['configparser', 'doit', 'numpy', 'tables'],
+    install_requires=['configparser', 'numpy', 'tables'],
     entry_points={
         'console_scripts': [
             'psy = psyrun.main:psy_main'
