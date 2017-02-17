@@ -10,7 +10,6 @@ setup(
     packages=['psyrun'],
     provides=['psyrun'],
     install_requires=['configparser', 'doit', 'numpy', 'tables'],
-    scripts=['scripts/psy-merge'],  # FIXME make entry point
     entry_points={
         'console_scripts': [
             'psy = psyrun.main:psy_main'
