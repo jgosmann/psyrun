@@ -464,11 +464,6 @@ class AbstractBackend(object):
         dict
             Contains the id of the submitted job under the key ``'id'``.
         """
-        if depends_on is not None:
-            try:
-                depends_on = list(depends_on.values())
-            except AttributeError:
-                depends_on = [depends_on]
         code = '''
 try:
     import faulthandler
@@ -496,9 +491,9 @@ task = TaskDef({taskpath!r})
             if status is not None and name == status.name:
                 self.task.scheduler.kill(job)
 
-        return {'id': self.task.scheduler.submit(
+        return self.task.scheduler.submit(
             [self.task.python, codefile], output_filename, name, depends_on,
-            self.task.scheduler_args)}
+            self.task.scheduler_args)
 
     # def create_subtasks(self):
         # job = self.create_job()
