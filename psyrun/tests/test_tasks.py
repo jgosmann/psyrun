@@ -108,7 +108,7 @@ def test_fails_for_existing_old_results_by_default(taskenv):
     for w in record:
         assert not issubclass(w.category, TaskWorkdirDirtyWarning)
     time.sleep(1)
-    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
+    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'), None)
     with pytest.warns(TaskWorkdirDirtyWarning):
         psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
 
@@ -116,7 +116,7 @@ def test_fails_for_existing_old_results_by_default(taskenv):
 def test_allows_to_clean_results(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     time.sleep(1)
-    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'))
+    os.utime(os.path.join(taskenv.taskdir, 'task_square.py'), None)
     psy_main(['clean', '--taskdir', taskenv.taskdir, 'square'])
     with pytest.warns(None) as record:
         psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
