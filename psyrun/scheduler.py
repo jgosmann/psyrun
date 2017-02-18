@@ -254,7 +254,8 @@ class Sqsub(Scheduler):
         elif jobid not in self._jobs:
             try:
                 stdout = subprocess.check_output(
-                    ['sqjobs', str(jobid)], stderr=subprocess.STDOUT)
+                    ['sqjobs', str(jobid)], stderr=subprocess.STDOUT,
+                    universal_newlines=True)
                 for line in stdout.split(os.linesep)[2:]:
                     cols = line.split(None, 5)
                     if len(cols) > 3 and int(cols[0]) == jobid:
@@ -281,8 +282,8 @@ class Sqsub(Scheduler):
 
     def refresh_job_info(self):
         self._jobs = {}
-        stdout = subprocess.check_output(['sqjobs'])
-        for line in stdout.split(os.linesep)[2:]:
+        stdout = subprocess.check_output(['sqjobs'], universal_newlines=True)
+        for line in stdout.split('\n')[2:]:
             cols = line.split(None, 5)
             if len(cols) > 2 and cols[2] in ['Q', '*Q', 'Z']:
                 jobid = int(cols[0])
