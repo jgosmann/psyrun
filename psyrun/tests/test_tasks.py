@@ -238,9 +238,6 @@ def test_psyrun_does_not_resubmit_split_if_infiles_uptodate(
                 continue
             os.remove(os.path.join(dirpath, filename))
 
-    # FIXME list command
-    # psy_main(taskenv.taskdir, [
-        # 'list', '-s', '--all', 'mocked_scheduler'])
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     for job in scheduler.joblist:
         assert 'split' not in job['name']
@@ -344,6 +341,6 @@ def test_multiple_splits(taskenv):
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
-# FIXME no asserts?
 def test_working_directory(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'workingdir'])
+    # Assert is within the task file.
