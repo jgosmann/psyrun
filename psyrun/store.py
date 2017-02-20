@@ -22,7 +22,7 @@ class AbstractStore(object):
     def save(self, filename, data):
         """Save data to a file.
 
-        Paramaters
+        Parameters
         ----------
         filename : str
             Filename of file to save data to.
@@ -99,7 +99,7 @@ class PickleStore(AbstractStore):
             for k in keys:
                 if k not in loaded:
                     n = max(len(v) for v in loaded.values())
-                    loaded[k] = [None] * k
+                    loaded[k] = [None] * n
                 if not isinstance(loaded[k], list):
                     loaded[k] = list(loaded[k])
                 v = data.get(k, [None])
@@ -192,7 +192,6 @@ class H5Store(AbstractStore):
         with tables.open_file(filename, 'r') as h5:
             return {node._v_name: node.read(row) for node in h5.iter_nodes(
                 self.node)}
-
 
     def append(self, filename, data):
         import tables
