@@ -6,7 +6,7 @@ import time
 import pytest
 
 from psyrun.main import psy_main
-from psyrun.store import H5Store, NpzStore
+from psyrun.store import H5Store, NpzStore, PickleStore
 from psyrun.tasks import (
     TaskDef, Config, JobsRunningWarning, TaskWorkdirDirtyWarning)
 from psyrun.mockscheduler import MockScheduler
@@ -88,8 +88,8 @@ def test_load_config_from_file(tmpdir):
 class TestPsyrun(object):
     def test_psyrun(self, taskenv, task):
         psy_main(['run', '--taskdir', taskenv.taskdir, task])
-        result = NpzStore().load(
-            os.path.join(taskenv.workdir, task, 'result.npz'))
+        result = PickleStore().load(
+            os.path.join(taskenv.workdir, task, 'result.pkl'))
         assert sorted(result['y']) == [0, 1, 4, 9]
 
 
@@ -97,6 +97,13 @@ def test_psyrun_h5_backend(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square_h5'])
     result = H5Store().load(
         os.path.join(taskenv.workdir, 'square_h5', 'result.h5'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+def test_psyrun_npz_backend(taskenv):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square_npz'])
+    result = NpzStore().load(
+        os.path.join(taskenv.workdir, 'square_npz', 'result.npz'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
@@ -128,9 +135,9 @@ def test_psyrun_workdir_contents(taskenv):
     workdir = os.path.join('psy-work', 'square')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
-    assert os.path.exists(os.path.join(workdir, 'in', '0.npz'))
-    assert os.path.exists(os.path.join(workdir, 'out', '0.npz'))
-    assert os.path.exists(os.path.join(workdir, 'result.npz'))
+    assert os.path.exists(os.path.join(workdir, 'in', '0.pkl'))
+    assert os.path.exists(os.path.join(workdir, 'out', '0.pkl'))
+    assert os.path.exists(os.path.join(workdir, 'result.pkl'))
     assert os.path.exists(os.path.join(workdir, 'square:split.py'))
     assert os.path.exists(os.path.join(workdir, 'square:process:0.py'))
     assert os.path.exists(os.path.join(workdir, 'square:merge.py'))
@@ -143,8 +150,8 @@ def test_psyrun_workdir_contents_load_balanced(taskenv):
     workdir = os.path.join('psy-work', 'square_load_balanced')
     os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square_load_balanced'])
-    assert os.path.exists(os.path.join(workdir, 'in.npz'))
-    assert os.path.exists(os.path.join(workdir, 'result.npz'))
+    assert os.path.exists(os.path.join(workdir, 'in.pkl'))
+    assert os.path.exists(os.path.join(workdir, 'result.pkl'))
     assert os.path.exists(os.path.join(
         workdir, 'square_load_balanced:pspace.py'))
     assert os.path.exists(os.path.join(
@@ -161,8 +168,8 @@ def test_psyrun_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('2')
     psy_main(['run', '--taskdir', taskenv.taskdir, 'file_dep'])
-    result = NpzStore().load(os.path.join(
-        taskenv.workdir, 'file_dep', 'result.npz'))
+    result = PickleStore().load(os.path.join(
+        taskenv.workdir, 'file_dep', 'result.pkl'))
     assert sorted(result['y']) == [4]
 
     # Ensure that modification time changes as some file systems only support
@@ -172,8 +179,8 @@ def test_psyrun_file_dep(taskenv):
     with open(os.path.join(taskenv.taskdir, 'in.txt'), 'w') as f:
         f.write('3')
     psy_main(['run', '--taskdir', taskenv.taskdir, 'file_dep'])
-    result = NpzStore().load(os.path.join(
-        taskenv.workdir, 'file_dep', 'result.npz'))
+    result = PickleStore().load(os.path.join(
+        taskenv.workdir, 'file_dep', 'result.pkl'))
     assert sorted(result['y']) == [8]
 
 
@@ -188,7 +195,7 @@ def test_psyrun_does_not_resubmit_queued_jobs(taskenv, scheduler):
 def test_psyrun_remerges_if_result_is_missing(taskenv, scheduler):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
-    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
+    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.pkl'))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
@@ -200,7 +207,7 @@ def test_psyrun_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
     scheduler.consume()
     for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
-            if filename == 'result.npz':
+            if filename == 'result.pkl':
                 continue
             os.remove(os.path.join(dirpath, filename))
 
@@ -211,9 +218,9 @@ def test_psyrun_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
 def test_psyrun_resubmits_for_missing_job_output(taskenv, scheduler):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
-    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.npz'))
+    os.remove(os.path.join(taskenv.workdir, 'mocked_scheduler', 'result.pkl'))
     os.remove(os.path.join(
-        taskenv.workdir, 'mocked_scheduler', 'out', '0.npz'))
+        taskenv.workdir, 'mocked_scheduler', 'out', '0.pkl'))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 2
@@ -280,10 +287,10 @@ def test_psyrun_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.npz'),
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.pkl'),
             (t, t))
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.npz'),
+            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.pkl'),
             (t, t))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
@@ -302,7 +309,7 @@ def test_psyrun_resubmits_process_and_merge_if_outfile_is_outdated(
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.npz'),
+            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.pkl'),
             (t, t))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
@@ -332,8 +339,8 @@ def test_psyrun_resubmits_all_if_infile_is_outdated(
 
 def test_multiple_splits(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square2'])
-    result = NpzStore().load(os.path.join(
-        taskenv.workdir, 'square2', 'result.npz'))
+    result = PickleStore().load(os.path.join(
+        taskenv.workdir, 'square2', 'result.pkl'))
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 

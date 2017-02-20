@@ -8,7 +8,7 @@ import sys
 import traceback
 import warnings
 
-from psyrun.store import NpzStore
+from psyrun.store import PickleStore
 from psyrun.pspace import Param
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
@@ -109,7 +109,7 @@ class Config(object):
     file_dep : list of str
         Additional files the task depends on.
     store : :class:`.store.AbstractStore`
-        Input/output backend. Defaults to :class:`NpzStore`.
+        Input/output backend. Defaults to :class:`PickleStore`.
     """
 
     __slots__ = [
@@ -128,7 +128,7 @@ class Config(object):
         self.min_items = 4
         self.backend = DistributeBackend
         self.file_dep = []
-        self.store = NpzStore()
+        self.store = PickleStore()
         self.overwrite_dirty = True
 
     @classmethod
