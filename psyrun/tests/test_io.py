@@ -44,10 +44,6 @@ class TestDictStores(object):
 
         data1 = {'a': np.zeros((1, 1, 2))}
         data2 = {'a': np.ones((2, 2, 1))}
-        expected = np.array([
-            [[0., 0.], [np.nan, np.nan]],
-            [[1., np.nan], [1., np.nan]],
-            [[1., np.nan], [1., np.nan]]])
 
         store.append(filename, data1)
         store.append(filename, data2)

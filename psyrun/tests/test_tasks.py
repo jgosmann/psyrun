@@ -47,7 +47,7 @@ def scheduler(taskenv, request):
     def fin():
         try:
             os.remove(jobfile)
-        except:
+        except OSError:
             pass
 
     request.addfinalizer(fin)
@@ -205,7 +205,7 @@ def test_psyrun_remerges_if_result_is_missing(taskenv, scheduler):
 def test_psyrun_no_resubmits_if_result_is_uptodate(taskenv, scheduler):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
-    for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
+    for dirpath, _, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
             if filename == 'result.pkl':
                 continue
@@ -232,7 +232,7 @@ def test_psyrun_does_not_resubmit_split_if_infiles_uptodate(
         taskenv, scheduler):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     scheduler.consume()
-    for dirpath, dirnames, filenames in os.walk(taskenv.workdir):
+    for dirpath, _, filenames in os.walk(taskenv.workdir):
         for filename in filenames:
             if os.path.basename(dirpath) == 'out':
                 continue
@@ -287,11 +287,11 @@ def test_psyrun_resubmits_merge_if_result_is_outdated(taskenv, scheduler):
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.pkl'),
-            (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'in',
+            str(i) + '.pkl'), (t, t))
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'out', str(i) + '.pkl'),
-            (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'out',
+            str(i) + '.pkl'), (t, t))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 1
@@ -309,8 +309,8 @@ def test_psyrun_resubmits_process_and_merge_if_outfile_is_outdated(
         (t, t))
     for i in range(4):
         os.utime(os.path.join(
-            taskenv.workdir, 'mocked_scheduler', 'in', str(i) + '.pkl'),
-            (t, t))
+            taskenv.workdir, 'mocked_scheduler', 'in',
+            str(i) + '.pkl'), (t, t))
 
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     assert len(scheduler.joblist) == 5

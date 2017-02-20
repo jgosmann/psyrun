@@ -2,7 +2,6 @@
 
 import errno
 
-# FIXME shouldn't be a dependency?
 import numpy as np
 from six import string_types
 from six.moves import cPickle as pickle
@@ -268,9 +267,12 @@ def _match_shape(a, shape):
     matched = np.empty((a.shape[0],) + shape, dtype=dtype)
     if np.issubdtype(dtype, float) or np.issubdtype(dtype, complex):
         matched.fill(np.nan)
-    elif dtype.kind == 'S':  # FIXME bytes and unicode?
+    elif dtype.kind in 'SU':
         matched.fill('')
-    # FIXME warning if no nan supported but missing values
+    elif dtype.kind == 'O':
+        matched.fill(None)
+    else:
+        raise ValueError("Dtype does not support missing values.")
 
     matched[np.ix_(*(range(x) for x in a.shape))] = a
     return matched

@@ -17,7 +17,7 @@ from psyrun.scheduler import ImmediateRun
 class JobsRunningWarning(UserWarning):
     def __init__(self, name):
         self.task = name
-        super(UserWarning, self).__init__(
+        super(JobsRunningWarning, self).__init__(
             "Task '{}' has unfinished jobs queued. Not starting new jobs "
             "until these are finished or have been killed.".format(name))
 
@@ -26,7 +26,7 @@ class TaskWorkdirDirtyWarning(UserWarning):
     def __init__(self, name):
         # TODO explain how to solve this
         self.task = name
-        super(UserWarning, self).__init__(
+        super(TaskWorkdirDirtyWarning, self).__init__(
             "Work directory of task '{}' is dirty.".format(name))
 
 
@@ -194,7 +194,7 @@ class PackageLoader(object):
                         path=path))
         return task_defs
 
-    def load_tasks(self, cmd, opt_values, pos_args):
+    def load_tasks(self):
         task_list = []
         for task_def in self.load_task_defs():
             task_list.extend(self.create_task(task_def))
@@ -296,7 +296,7 @@ class Submit(JobTreeVisitor):
 
 class Clean(JobTreeVisitor):
     def __init__(self, job, task, names):
-        super(Submit, self).__init__()
+        super(Clean, self).__init__()
         self.task = task
         self.names = names
         self.visit(job)
@@ -309,6 +309,12 @@ class Clean(JobTreeVisitor):
         for t in job.targets:
             if os.path.exists(t):
                 os.remove(t)
+
+    def visit_chain(self, chain):
+        pass
+
+    def visit_group(self, chain):
+        pass
 
 
 class Fullname(JobTreeVisitor):
@@ -358,7 +364,7 @@ class Uptodate(JobTreeVisitor):
                 warnings.warn(TaskWorkdirDirtyWarning(self.task.name))
 
         if skip:
-            for k in self.status.keys():
+            for k in self.status:
                 self.status[k] = True
 
     def _is_workdir_clean(self):
@@ -366,7 +372,7 @@ class Uptodate(JobTreeVisitor):
         if not os.path.exists(workdir):
             return True
         else:
-            for dirpath, dirnames, filenames in os.walk(workdir):
+            for _, _, filenames in os.walk(workdir):
                 if len(filenames) > 0:
                     return False
             return True

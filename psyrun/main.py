@@ -61,11 +61,17 @@ class TaskdirCmd(Command):
             '--taskdir', nargs=1, type=str, default=['psy-tasks'],
             help="Directory to load tasks from.")
 
+    def run(self):
+        raise NotImplementedError()
+
 
 class TaskselCmd(TaskdirCmd):
     def add_args(self):
         super(TaskselCmd, self).add_args()
         self.parser.add_argument('task', nargs='*', type=str)
+
+    def run(self):
+        raise NotImplementedError()
 
 
 class RunCmd(TaskselCmd):
