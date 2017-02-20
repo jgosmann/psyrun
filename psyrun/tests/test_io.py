@@ -86,6 +86,20 @@ class TestStringStoring(object):
         assert np.all(np.concatenate([data1['a'], data2['a']]) == saved['a'])
         assert np.all(np.array([1, 2, 3]) == saved['num'])
 
+    def test_handles_missing_values(self, store, tmpdir):
+        filename = str(tmpdir.join('r' + store.ext))
+
+        data1 = {'num': [1, 2], 'a': ['A', 'B']}
+        data2 = {'num': [3], 'b': ['AB']}
+
+        store.append(filename, data1)
+        store.append(filename, data2)
+
+        saved = store.load(filename)
+        print(saved)
+        assert np.all(saved['a'][:2] == data1['a'])
+        assert np.all(saved['b'][2:] == data2['b'])
+
 
 @pytest.mark.parametrize('store', [H5Store()])
 def test_non_string_supporting(tmpdir, store):
