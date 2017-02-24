@@ -3,7 +3,7 @@ import os.path
 import shutil
 
 from psyrun.processing import Splitter
-from psyrun.tasks import Fullname, PackageLoader, Submit, Uptodate
+from psyrun.tasks import Clean, Fullname, PackageLoader, Submit, Uptodate
 from psyrun.venv import init_virtualenv
 
 
@@ -82,6 +82,7 @@ class RunCmd(TaskselCmd):
                 job = backend.create_job()
                 names = Fullname(job).names
                 uptodate = Uptodate(job, names, t)
+                Clean(job, t, names, uptodate)
                 Submit(job, names, uptodate)
 
 

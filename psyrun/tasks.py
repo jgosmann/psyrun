@@ -295,13 +295,19 @@ class Submit(JobTreeVisitor):
 
 
 class Clean(JobTreeVisitor):
-    def __init__(self, job, task, names):
+    def __init__(self, job, task, names, uptodate=None):
         super(Clean, self).__init__()
         self.task = task
         self.names = names
+        if uptodate is None:
+            uptodate = {}
+        self.uptodate = uptodate
         self.visit(job)
 
     def visit_job(self, job):
+        if self.uptodate.get(job, False):
+            return
+
         workdir = os.path.join(self.task.workdir, self.task.name)
         for item in os.listdir(workdir):
             if item.startswith(self.names[job]):
