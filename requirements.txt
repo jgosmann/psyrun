@@ -2,7 +2,7 @@ cython
 joblib
 numpy
 numexpr
-pytest
+pytest >= 2.8
 pytest-cov
 six
 tables
