@@ -80,7 +80,10 @@ class Scheduler(object):
 
 
 class ImmediateRun(Scheduler):
-    """Runs jobs immediatly on the local machine."""
+    """Runs jobs immediately on the local machine."""
+
+    _cur_id = 0
+    _failed_jobs = []
 
     def submit(
             self, args, output_filename, name=None, depends_on=None,
@@ -103,11 +106,18 @@ class ImmediateRun(Scheduler):
         Returns
         -------
         int
-            0
+            Job ID
         """
+        self._cur_id += 1
+
+        if any(x in self._failed_jobs for x in depends_on):
+            self._failed_jobs.append(self._cur_id)
+            return self._cur_id
+
         with open(output_filename, 'a') as f:
-            subprocess.call(args, stdout=f, stderr=subprocess.STDOUT)
-        return 0
+            if subprocess.call(args, stdout=f, stderr=subprocess.STDOUT) != 0:
+                self._failed_jobs.append(self._cur_id)
+        return self._cur_id
 
     def kill(self, jobid):
         """Has no effect."""
