@@ -1,15 +1,22 @@
 language: python
+sudo: false
+
+addons:
+    apt:
+        packages:
+            - libhdf5-serial-dev
+
 python:
   - "2.7"
   - "3.3"
   - "3.4"
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y libhdf5-serial-dev
+
 install:
   - pip install cython numpy numexpr
   - pip install -r requirements.txt
   - pip install coveralls==0.5
-  - python setup.py develop
+  - pip install -e .
+
 script: py.test -v --cov psyrun
+
 after_success: coveralls
