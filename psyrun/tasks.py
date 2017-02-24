@@ -501,12 +501,6 @@ task = TaskDef({taskpath!r})
             [self.task.python, codefile], output_filename, name, depends_on,
             self.task.scheduler_args)
 
-    # def create_subtasks(self):
-        # job = self.create_job()
-        # names = Fullname(job).names
-        # return ToDoitTask(self.task, names, Uptodate(
-            # job, names, self.task).status).visit(job)
-
     def create_job(self):
         raise NotImplementedError()
 
