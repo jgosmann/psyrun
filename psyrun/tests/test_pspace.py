@@ -112,6 +112,11 @@ class TestProduct(object):
         assert len(Param(a=[1, 2]) * Param(b=[])) == 0
         assert len(Param(a=[]) * Param(b=[1, 2])) == 0
 
+    def test_multidimensional(self):
+        space = (Param(a=[[1, 1], [2, 2]]) * Param(b=[1, 2])).build()
+        assert space['a'] == [[1, 1], [1, 1], [2, 2], [2, 2]]
+        assert space['b'] == [1, 2, 1, 2]
+
 
 class TestSum(object):
     def test_sum(self):
@@ -137,6 +142,13 @@ class TestSum(object):
     def test_length(self):
         assert len(Param(a=[1]) + Param(a=[2, 3])) == 3
 
+    def test_multidimensional(self):
+        space = (Param(a=[[1, 1], [2, 2]]) + Param(a=[[3, 3]])).build()
+        assert space['a'] == [[1, 1], [2, 2], [3, 3]]
+
+        space = (Param(a=[[1, 1], [2, 2]]) + Param(a=[3, 4])).build()
+        assert space['a'] == [[1, 1], [2, 2], 3, 4]
+
 
 class TestDifference(object):
     def test_difference(self):
@@ -159,6 +171,10 @@ class TestDifference(object):
     def test_length(self):
         assert len(Param(a=[1, 2, 2], b=[4, 5, 6]) - Param(a=[2])) == 1
 
+    def test_multidimensional(self):
+        space = (Param(a=[[1, 1], [2, 2]]) - Param(a=[[2, 2]])).build()
+        assert space['a'] == [[1, 1]]
+
 
 class TestMissing(object):
     def test_missing(self):
@@ -179,3 +195,7 @@ class TestMissing(object):
 
     def test_length(self):
         assert len(missing(Param(a=[1, 2, 3]), Param(a=[2]))) == 2
+
+    def test_multidimensional(self):
+        space = missing(Param(a=[[1, 1], [2, 2]]), Param(a=[[1, 1]])).build()
+        assert space['a'] == [[2, 2]]
