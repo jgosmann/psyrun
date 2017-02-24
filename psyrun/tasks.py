@@ -9,7 +9,7 @@ import traceback
 import warnings
 
 from psyrun.store import PickleStore
-from psyrun.pspace import Param
+from psyrun.pspace import missing, Param
 from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
 
@@ -510,6 +510,9 @@ task = TaskDef({taskpath!r})
     def create_job(self):
         raise NotImplementedError()
 
+    def get_status(self):
+        raise NotImplementedError
+
 
 class DistributeBackend(AbstractBackend):
     """Create subtasks for to distribute parameter evaluations.
@@ -578,6 +581,22 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
             'merge', self._submit, code,
             [f for _, f in self.splitter.iter_in_out_files()],
             [self.resultfile])
+
+    def get_status(self):
+        pspace = self.task.pspace
+        try:
+            missing_items = missing(
+                pspace, Param(**self.task.store.load(self.resultfile)))
+        except IOError:
+            missing_items = pspace
+            for _, outfile in self.splitter.iter_in_out_files():
+                try:
+                    missing_items = missing(
+                        missing_items,
+                        Param(**self.task.store.load(outfile)))
+                except IOError:
+                    pass
+        return len(pspace) - len(missing_items), len(pspace)
 
 
 class LoadBalancingBackend(AbstractBackend):
@@ -653,3 +672,17 @@ os.rename({part!r}, {whole!r})
         return Job(
             'finalize', self._submit, code, [self.partial_resultfile],
             [self.resultfile])
+
+    def get_status(self):
+        pspace = self.task.pspace
+        try:
+            missing_items = missing(
+                pspace, Param(**self.task.store.load(self.resultfile)))
+        except IOError:
+            try:
+                missing_items = missing(
+                    pspace,
+                    Param(**self.task.store.load(self.partial_resultfile)))
+            except IOError:
+                pass
+        return len(pspace) - len(missing_items), len(pspace)

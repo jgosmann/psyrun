@@ -66,33 +66,39 @@ class TaskdirCmd(Command):
 
 
 class TaskselCmd(TaskdirCmd):
+    default_to_all = True
+
     def add_args(self):
         super(TaskselCmd, self).add_args()
         self.parser.add_argument('task', nargs='*', type=str)
 
     def run(self):
+        run_all = self.default_to_all and len(self.args.task) == 0
+        for t in self.package_loader.load_task_defs():
+            if run_all or t.name in self.args.task:
+                return self.run_task(t)
+
+    def run_task(self, task):
         raise NotImplementedError()
 
 
 class RunCmd(TaskselCmd):
-    def run(self):
-        for t in self.package_loader.load_task_defs():
-            if len(self.args.task) == 0 or t.name in self.args.task:
-                backend = t.backend(t)
-                job = backend.create_job()
-                names = Fullname(job).names
-                uptodate = Uptodate(job, names, t)
-                Clean(job, t, names, uptodate)
-                Submit(job, names, uptodate)
+    def run_task(self, task):
+        backend = task.backend(task)
+        job = backend.create_job()
+        names = Fullname(job).names
+        uptodate = Uptodate(job, names, task)
+        Clean(job, task, names, uptodate)
+        Submit(job, names, uptodate)
 
 
 class CleanCmd(TaskselCmd):
-    def run(self):
-        for t in self.package_loader.load_task_defs():
-            if t.name in self.args.task:
-                path = os.path.join(t.workdir, t.name)
-                print('rm', path)
-                shutil.rmtree(path)
+    default_to_all = False
+
+    def run_task(self, task):
+        path = os.path.join(task.workdir, task.name)
+        print('rm', path)
+        shutil.rmtree(path)
 
 
 class ListCmd(TaskdirCmd):
@@ -112,12 +118,17 @@ class MergeCmd(Command):
         Splitter.merge(self.args.directory, self.args.merged)
 
 
+class StatusCmd(TaskselCmd):
+    def run_task(self, task):
+        completed, n_rows = task.backend(task).get_status()
+        print("{}: {} out of {} rows completed.".format(
+            task.name, completed, n_rows))
+
+
 class TestCmd(TaskselCmd):
-    def run(self):
-        for t in self.package_loader.load_task_defs():
-            if len(self.args.task) <= 0 or t.name in self.args.task:
-                print(t.name)
-                t.execute(**next(t.pspace.iterate()))
+    def run_task(self, task):
+        print(task.name)
+        task.execute(**next(task.pspace.iterate()))
 
 
 commands.update({
@@ -125,5 +136,6 @@ commands.update({
     'clean': CleanCmd,
     'list': ListCmd,
     'merge': MergeCmd,
+    'status': StatusCmd,
     'test': TestCmd,
 })
