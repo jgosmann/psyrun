@@ -113,8 +113,6 @@ class PickleStore(AbstractStore):
                     loaded[k] = list(loaded[k])
 
                 v = data.get(k, [None])
-                if isinstance(v, string_types + (bytes,)):
-                    v = [v]
                 if len(v) != new_n:
                     if len(v) == 1:
                         v = v * new_n

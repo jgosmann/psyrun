@@ -53,22 +53,8 @@ class TestDictStores(object):
         assert np.all(saved['a'][1][:2, :1] == data2['a'][0])
         assert np.all(saved['a'][2][:2, :1] == data2['a'][1])
 
-
 @pytest.mark.parametrize('store', [NpzStore(), PickleStore()])
 class TestStringStoring(object):
-    def test_saves_single_strings(self, store, tmpdir):
-        filename = str(tmpdir.join('r' + store.ext))
-
-        data1 = {'a': 'A', 'num': [1]}
-        data2 = {'a': 'AB', 'num': [2]}
-
-        store.append(filename, data1)
-        store.append(filename, data2)
-
-        saved = store.load(filename)
-        assert np.all(np.array([data1['a'], data2['a']]) == saved['a'])
-        assert np.all(np.array([1, 2]) == saved['num'])
-
     def test_saves_single_string_list(self, store, tmpdir):
         filename = str(tmpdir.join('r' + store.ext))
 
