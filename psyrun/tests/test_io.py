@@ -92,3 +92,39 @@ def test_non_string_supporting(tmpdir, store):
 
     with pytest.raises(NotImplementedError):
         store.append(filename, {'a': ['some string']})
+
+
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore()])
+def test_dict_and_lists(store, tmpdir):
+    filename = str(tmpdir.join('r' + store.ext))
+
+    obj1 = {'x': [1, 2]}
+    obj2 = {'y': [3, 4]}
+
+    store.append(filename, {'a': [obj1]})
+    store.append(filename, {'a': [obj2]})
+
+    saved = store.load(filename)
+    print(store, saved)
+    assert np.all(saved['a'] == [obj1, obj2])
+
+
+class ObjectMock(object):
+    def __init__(self, value):
+        self.value = value
+
+
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore()])
+def test_object(store, tmpdir):
+    filename = str(tmpdir.join('r' + store.ext))
+
+    obj1 = ObjectMock(1)
+    obj2 = ObjectMock(2)
+
+    store.append(filename, {'a': [obj1]})
+    store.append(filename, {'a': [obj2]})
+
+    saved = store.load(filename)
+    print(store, saved)
+    assert saved['a'][0].value == 1
+    assert saved['a'][1].value == 2
