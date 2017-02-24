@@ -510,7 +510,7 @@ task = TaskDef({taskpath!r})
     def create_job(self):
         raise NotImplementedError()
 
-    def get_status(self):
+    def get_missing(self):
         raise NotImplementedError
 
 
@@ -582,7 +582,7 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
             [f for _, f in self.splitter.iter_in_out_files()],
             [self.resultfile])
 
-    def get_status(self):
+    def get_missing(self):
         pspace = self.task.pspace
         try:
             missing_items = missing(
@@ -596,7 +596,7 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
                         Param(**self.task.store.load(outfile)))
                 except IOError:
                     pass
-        return len(pspace) - len(missing_items), len(pspace)
+        return missing_items
 
 
 class LoadBalancingBackend(AbstractBackend):
@@ -673,7 +673,7 @@ os.rename({part!r}, {whole!r})
             'finalize', self._submit, code, [self.partial_resultfile],
             [self.resultfile])
 
-    def get_status(self):
+    def get_missing(self):
         pspace = self.task.pspace
         try:
             missing_items = missing(
@@ -685,4 +685,4 @@ os.rename({part!r}, {whole!r})
                     Param(**self.task.store.load(self.partial_resultfile)))
             except IOError:
                 pass
-        return len(pspace) - len(missing_items), len(pspace)
+        return missing_items

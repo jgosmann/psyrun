@@ -119,10 +119,22 @@ class MergeCmd(Command):
 
 
 class StatusCmd(TaskselCmd):
+    def add_args(self):
+        super(StatusCmd, self).add_args()
+        self.parser.add_argument(
+            '-v', '--verbose', action='store_true',
+            help="Print missing parameter sets.")
+
     def run_task(self, task):
-        completed, n_rows = task.backend(task).get_status()
-        print("{}: {} out of {} rows completed.".format(
-            task.name, completed, n_rows))
+        missing = task.backend(task).get_missing()
+        print("{}:".format(task.name))
+        print("  {} out of {} rows completed.".format(
+            len(task.pspace) - len(missing), len(task.pspace)))
+        if self.args.verbose:
+            print("  Missing parameter sets:")
+            for pset in missing.iterate():
+                print('   ', pset)
+        print("")
 
 
 class TestCmd(TaskselCmd):
