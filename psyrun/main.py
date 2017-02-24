@@ -1,9 +1,11 @@
 import argparse
 import os.path
 import shutil
+import warnings
 
 from psyrun.processing import Splitter
-from psyrun.tasks import Clean, Fullname, PackageLoader, Submit, Uptodate
+from psyrun.tasks import (
+    Clean, Fullname, PackageLoader, Submit, TaskWorkdirDirtyWarning, Uptodate)
 from psyrun.venv import init_virtualenv
 
 
@@ -83,12 +85,28 @@ class TaskselCmd(TaskdirCmd):
 
 
 class RunCmd(TaskselCmd):
+    def add_args(self):
+        super(RunCmd, self).add_args()
+        self.parser.add_argument(
+            '-c', '--continue', action='store_true',
+            help="Preserve existing data in the workdir and do not rerun"
+            "parameter assignment already existent in there.")
+
     def run_task(self, task):
+        cont = vars(self.args)['continue']
         backend = task.backend(task)
-        job = backend.create_job()
+
+        job = backend.create_job(cont=cont)
         names = Fullname(job).names
         uptodate = Uptodate(job, names, task)
-        Clean(job, task, names, uptodate)
+
+        if not cont:
+            if uptodate.outdated and os.path.exists(backend.resultfile):
+                if not task.overwrite_dirty:
+                    warnings.warn(TaskWorkdirDirtyWarning(task.name))
+                    return
+
+            Clean(job, task, names, uptodate)
         Submit(job, names, uptodate)
 
 

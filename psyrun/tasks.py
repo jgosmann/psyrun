@@ -364,24 +364,9 @@ class Uptodate(JobTreeVisitor):
         if self.any_queued and self.outdated:
             skip = True
             warnings.warn(JobsRunningWarning(self.task.name))
-        elif self.outdated and not self._is_workdir_clean():
-            if not self.task.overwrite_dirty:
-                skip = True
-                warnings.warn(TaskWorkdirDirtyWarning(self.task.name))
-
         if skip:
             for k in self.status:
                 self.status[k] = True
-
-    def _is_workdir_clean(self):
-        workdir = os.path.join(self.task.workdir, self.task.name)
-        if not os.path.exists(workdir):
-            return True
-        else:
-            for _, _, filenames in os.walk(workdir):
-                if len(filenames) > 0:
-                    return False
-            return True
 
     def visit_job(self, job):
         if self.is_job_queued(job):
@@ -523,45 +508,71 @@ class DistributeBackend(AbstractBackend):
         Task definition to create subtasks for.
     """
 
-    def __init__(self, task):
-        super(DistributeBackend, self).__init__(task)
-        self.splitter = Splitter(
-            self.workdir, task.pspace, task.max_jobs, task.min_items,
-            store=task.store)
-
     @property
     def resultfile(self):
         if self.task.resultfile:
             return self.task.resultfile
         else:
             return os.path.join(
-                self.splitter.workdir, 'result' + self.splitter.store.ext)
+                self.workdir, 'result' + self.task.store.ext)
 
-    def create_job(self):
-        split = self.create_split_job()
-        process = self.create_process_job()
-        merge = self.create_merge_job()
+    @property
+    def pspace_file(self):
+        return os.path.join(self.workdir, 'pspace' + self.task.store.ext)
+
+    def _try_mv_to_out(self, filename):
+        try:
+            os.rename(
+                os.path.join(self.workdir, filename),
+                os.path.join(self.workdir, 'out', filename))
+        except OSError:
+            pass
+
+    def create_job(self, cont=False):
+        if cont:
+            outdir = os.path.join(self.workdir, 'out')
+            self._try_mv_to_out('result' + self.task.store.ext)
+            Splitter.merge(
+                outdir, os.path.join(outdir, 'pre' + self.task.store.ext))
+            for filename in os.listdir(outdir):
+                if not filename.startswith('pre'):
+                    os.remove(os.path.join(outdir, filename))
+            pspace = self.get_missing()
+        else:
+            pspace = self.task.pspace
+
+        self.task.store.save(self.pspace_file, pspace.build())
+        splitter = Splitter(
+            self.workdir, pspace, self.task.max_jobs, self.task.min_items,
+            store=self.task.store)
+
+        split = self.create_split_job(splitter)
+        process = self.create_process_job(splitter)
+        merge = self.create_merge_job(splitter)
         return JobChain(self.task.name, [split, process, merge])
 
-    def create_split_job(self):
+    def create_split_job(self, splitter):
         code = '''
 from psyrun.processing import Splitter
+from psyrun.pspace import Param
+pspace = Param.from_dict(task.store.load({pspace!r}))
 Splitter(
-    {workdir!r}, task.pspace, {max_jobs!r}, {min_items!r},
+    {workdir!r}, pspace, {max_jobs!r}, {min_items!r},
     store=task.store).split()
         '''.format(
-            workdir=self.splitter.workdir, max_jobs=self.task.max_jobs,
+            pspace=self.pspace_file,
+            workdir=splitter.workdir, max_jobs=self.task.max_jobs,
             min_items=self.task.min_items)
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
             'split', self._submit, code, [self.task.path] + file_dep,
-            [f for f, _ in self.splitter.iter_in_out_files()])
+            [f for f, _ in splitter.iter_in_out_files()])
 
-    def create_process_job(self):
+    def create_process_job(self, splitter):
         jobs = []
         for i, (infile, outfile) in enumerate(
-                self.splitter.iter_in_out_files()):
+                splitter.iter_in_out_files()):
             code = '''
 from psyrun.processing import Worker
 execute = task.execute
@@ -572,15 +583,14 @@ Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
         group = JobGroup('process', jobs)
         return group
 
-    def create_merge_job(self):
+    def create_merge_job(self, splitter):
         code = '''
 from psyrun.processing import Splitter
 Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
-        '''.format(outdir=self.splitter.outdir, filename=self.resultfile)
+        '''.format(outdir=splitter.outdir, filename=self.resultfile)
         return Job(
             'merge', self._submit, code,
-            [f for _, f in self.splitter.iter_in_out_files()],
-            [self.resultfile])
+            [f for _, f in splitter.iter_in_out_files()], [self.resultfile])
 
     def get_missing(self):
         pspace = self.task.pspace
@@ -589,7 +599,8 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
                 pspace, Param(**self.task.store.load(self.resultfile)))
         except IOError:
             missing_items = pspace
-            for _, outfile in self.splitter.iter_in_out_files():
+            for filename in os.path.join(self.workdir, 'out'):
+                outfile = os.path.join(self.workdir, 'out', filename)
                 try:
                     missing_items = missing(
                         missing_items,
@@ -620,26 +631,29 @@ class LoadBalancingBackend(AbstractBackend):
         else:
             return os.path.join(self.workdir, 'result' + self.task.store.ext)
 
-    def create_job(self):
-        pspace = self.create_pspace_job()
+    def create_job(self, cont=False):
+        pspace = self.create_pspace_job(cont=cont)
         process = self.create_process_job()
         finalize = self.create_finalize_job()
         return JobChain(self.task.name, [pspace, process, finalize])
 
-    def create_pspace_job(self):
+    def create_pspace_job(self, cont):
         code = '''
 import os.path
 from psyrun.pspace import missing, Param
 from psyrun.processing import LoadBalancingWorker
-if os.path.exists({outfile!r}):
-    pspace = missing(task.pspace, Param.from_dict(task.store.load({outfile!r})))
-else:
-    pspace = task.pspace
+pspace = task.pspace
+if {cont!r}:
+    if os.path.exists({outfile!r}):
+        pspace = missing(pspace, Param.from_dict(task.store.load({outfile!r})))
+    if os.path.exists({part_outfile!r}):
+        pspace = missing(pspace, Param.from_dict(
+            task.store.load({part_outfile!r})))
 task.store.save({infile!r}, pspace.build())
 LoadBalancingWorker.create_statusfile({statusfile!r})
         '''.format(
-            infile=self.infile, outfile=self.resultfile,
-            statusfile=self.statusfile)
+            cont=cont, infile=self.infile, outfile=self.resultfile,
+            part_outfile=self.partial_resultfile, statusfile=self.statusfile)
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
