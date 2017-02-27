@@ -55,7 +55,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'psyrun'
-copyright = u'2015, Jan Gosmann'
+copyright = u'2015–2017, Jan Gosmann'
 author = u'Jan Gosmann'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -86,7 +86,7 @@ exclude_patterns = []
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
-#default_role = None
+default_role = 'any'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True

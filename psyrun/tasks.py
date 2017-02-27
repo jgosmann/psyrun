@@ -124,8 +124,8 @@ class Config(object):
         self.scheduler_args = dict()
         self.pspace = Param()
         self.python = sys.executable
-        self.max_jobs = 64
-        self.min_items = 4
+        self.max_jobs = 100
+        self.min_items = 1
         self.backend = DistributeBackend
         self.file_dep = []
         self.store = PickleStore()

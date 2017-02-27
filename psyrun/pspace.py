@@ -2,7 +2,6 @@
 
 import itertools
 
-import numpy as np
 from six import string_types
 
 
@@ -286,7 +285,7 @@ class Sum(_PSpaceObj):
 
     def iterate(self):
         """Iterates over the parameter assignments in the parameter space."""
-        return ({k: item.get(k, np.nan) for k in self.keys()}
+        return ({k: item.get(k, float('nan')) for k in self.keys()}
                 for item in itertools.chain(
                     self.left.iterate(), self.right.iterate()))
 
