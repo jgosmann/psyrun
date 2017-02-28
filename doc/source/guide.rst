@@ -225,6 +225,15 @@ efficient appends to existing data files. However, it only supports numeric
 data types.
 
 
+Backends
+--------
+
+Distribute
+^^^^^^^^^^
+
+LoadBalancing
+^^^^^^^^^^^^^
+
 Sqsub scheduler (Sharcnet)
 --------------------------
 

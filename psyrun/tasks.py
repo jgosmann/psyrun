@@ -1,3 +1,5 @@
+"""Psyrun's task handling API."""
+
 from __future__ import print_function
 
 import itertools
@@ -14,7 +16,16 @@ from psyrun.processing import Splitter
 from psyrun.scheduler import ImmediateRun
 
 
-class JobsRunningWarning(UserWarning):
+class TaskWarning(UserWarning):
+    """General warning related to task processing.
+
+    *TaskWarnings* will always be shown by default.
+    """
+    pass
+
+
+class JobsRunningWarning(TaskWarning):
+    """Warning issued when jobs for a task are still running."""
     def __init__(self, name):
         self.task = name
         super(JobsRunningWarning, self).__init__(
@@ -22,7 +33,8 @@ class JobsRunningWarning(UserWarning):
             "until these are finished or have been killed.".format(name))
 
 
-class TaskWorkdirDirtyWarning(UserWarning):
+class TaskWorkdirDirtyWarning(TaskWarning):
+    """Warning issued when the workdir is dirty and would be overwritten."""
     def __init__(self, name):
         # TODO explain how to solve this
         self.task = name
@@ -30,18 +42,23 @@ class TaskWorkdirDirtyWarning(UserWarning):
             "Work directory of task '{}' is dirty.".format(name))
 
 
-warnings.simplefilter('always', category=UserWarning)
+warnings.simplefilter('always', category=TaskWarning)
 
 
 class TaskDef(object):
     """Task defined by a Python file.
 
     Parameters
-    ----------
-    path : str
+    ---------
+    path: `str`
         Python file to load as task.
-    conf : :class:`.Config`
+    conf: `Config`
         Default values for task parameters.
+
+    Attributes
+    ----------
+    TASK_PATTERN: `re.RegexObject`
+        Regular expression to match task filenames.
     """
 
     TASK_PATTERN = re.compile(r'^task_(.*)$')
@@ -87,57 +104,68 @@ class Config(object):
 
     Attributes
     ----------
-    workdir : str
-        Working directory to store task data in.
-    resultfile : str or None
-        Path to save the results of the finished task at. If ``None``, this
-        defaults to ``'result.<ext>'`` in the `workdir`.
-    scheduler : :class:`.Scheduler`
-        Scheduler to use to submit individual jobs. Defaults to
-        :class:`.ImmediateRun`.
-    scheduler_args : dict
-        Additional scheduler arguments.
-    python : str
-        Path to Python interpreter to use.
-    max_jobs : int
-        Maximum number of splits of the parameter space. This limits the number
-        of jobs started.
-    min_items : int
-        Minimum number of parameter sets to evaluate per job.
-    backend : TODO
-        TODO
-    file_dep : list of str
+    backend: `Backend` (default: `DistributeBackend`)
+        The processing backend which determines how work is distributed across
+        jobs.
+    file_dep: sequence of `str` (default: ``[]``)
         Additional files the task depends on.
-    store : :class:`.store.AbstractStore`
+    max_jobs: `int` (default: ``100``)
+        Maximum number of jobs to start. With less jobs each job has to process
+        more parameter assignments. It depends on the  scheduler and backend
+        used to which degree these will run in parallel.
+    min_items: `int` (default: ``1``)
+        Minimum number of parameter assignment to evaluate per job. If a single
+        assignment is fast to evaluate, increasing this number can improve
+        performance because Psyrun will not start a new job for each parameter
+        assignment which can save some overhead.
+    overwrite_dirty: bool (default: `True`)
+        Whether to overwrite dirty workdirs without a warning.
+    pspace: `ParameterSpace`, required
+        Parameter space to evaluate.
+    python: `str` (default: ``sys.executable``)
+        Path to Python interpreter to use.
+    resultfile: `str` or `None` (default: `None`)
+        Path to save the results of the finished task at. If ``None``, this
+        defaults to ``'result.<ext>'`` in the *workdir*.
+    scheduler: `Scheduler` (default: `ImmediateRun`)
+        Scheduler to use to submit individual jobs.
+    scheduler_args: `dict` (default: ``{}``)
+        Additional scheduler arguments. See the documentation of the
+        scheduler for details.
+    store: `Store`
         Input/output backend. Defaults to :class:`PickleStore`.
+    workdir: `str` (default: ``'psy-work'``)
+        Working directory to store results and supporting data to process the
+        task.
+
     """
 
     __slots__ = [
-        'workdir', 'resultfile', 'scheduler', 'pspace', 'backend',
-        'scheduler_args', 'python', 'max_jobs', 'min_items', 'file_dep',
-        'store', 'overwrite_dirty']
+        'backend', 'file_dep', 'max_jobs', 'min_items', 'pspace',
+        'overwrite_dirty', 'python', 'resultfile', 'scheduler',
+        'scheduler_args', 'store', 'workdir']
 
     def __init__(self):
-        self.workdir = os.path.abspath('psy-work')
+        self.backend = DistributeBackend
+        self.file_dep = []
+        self.max_jobs = 100
+        self.min_items = 1
+        self.overwrite_dirty = True
+        self.pspace = Param()
+        self.python = sys.executable
         self.resultfile = None
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
-        self.pspace = Param()
-        self.python = sys.executable
-        self.max_jobs = 100
-        self.min_items = 1
-        self.backend = DistributeBackend
-        self.file_dep = []
         self.store = PickleStore()
-        self.overwrite_dirty = True
+        self.workdir = os.path.abspath('psy-work')
 
     @classmethod
     def load_from_file(cls, filename):
-        """Load the config values from a Python file.
+        """Load the configuration values from a Python file.
 
         Parameters
         ----------
-        filename : str
+        filename : `str`
             Python file to load.
         """
         conf = cls()
@@ -162,25 +190,42 @@ class Config(object):
 class PackageLoader(object):
     """Loads tasks from Python files.
 
-    Filenames have to match the regex defined in
-    :const:`.TaskDef.TASK_PATTERN`.  See :class:`.Config` for supported module
+    Filenames have to match the regular expression defined in
+    `TaskDef.TASK_PATTERN`. See `Config` for supported module
     level variables in the task definition.
+
+    It is possible to set these variables for all tasks by setting them in
+    the file ``psy-conf.py`` in the *taskdir*.
 
     Parameters
     ----------
-    taskdir : str
-        Directory to load files from.
+    taskdir: `str`
+        Directory to load task files from.
+
+    Attributes
+    ----------
+    taskdir: `str`
+        Directory to load task files from.
+    conf: `Config`
+        Default values for module level task variables.
     """
     def __init__(self, taskdir):
         super(PackageLoader, self).__init__()
         self.taskdir = taskdir
-        conffile = os.path.join(self.taskdir, 'psyconf.py')
+        conffile = os.path.join(self.taskdir, 'psy-conf.py')
         if os.path.exists(conffile):
             self.conf = Config.load_from_file(conffile)
         else:
             self.conf = Config()
 
     def load_task_defs(self):
+        """Load task definitions.
+
+        Returns
+        -------
+        `list` of `TaskDef`
+            Task definitions.
+        """
         task_defs = []
         for filename in os.listdir(self.taskdir):
             root, ext = os.path.splitext(filename)
@@ -193,16 +238,6 @@ class PackageLoader(object):
                     warnings.warn("Task {path!r} could not be loaded.".format(
                         path=path))
         return task_defs
-
-    def load_tasks(self):
-        task_list = []
-        for task_def in self.load_task_defs():
-            task_list.extend(self.create_task(task_def))
-        return task_list, {}
-
-    def create_task(self, task):
-        creator = task.backend(task)
-        return creator.create_job()
 
 
 class Job(object):
@@ -435,9 +470,9 @@ class Uptodate(JobTreeVisitor):
         return os.path.exists(filename) and os.stat(filename).st_mtime >= tref
 
 
-class AbstractBackend(object):
+class Backend(object):
     def __init__(self, task):
-        super(AbstractBackend, self).__init__()
+        super(Backend, self).__init__()
         self.task = task
         self.workdir = os.path.join(task.workdir, task.name)
         if not os.path.exists(self.workdir):
@@ -499,7 +534,7 @@ task = TaskDef({taskpath!r})
         raise NotImplementedError
 
 
-class DistributeBackend(AbstractBackend):
+class DistributeBackend(Backend):
     """Create subtasks for to distribute parameter evaluations.
 
     Parameters
@@ -555,7 +590,7 @@ class DistributeBackend(AbstractBackend):
         code = '''
 from psyrun.processing import Splitter
 from psyrun.pspace import Param
-pspace = Param.from_dict(task.store.load({pspace!r}))
+pspace = Param(**task.store.load({pspace!r}))
 Splitter(
     {workdir!r}, pspace, {max_jobs!r}, {min_items!r},
     store=task.store).split()
@@ -610,7 +645,7 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
         return missing_items
 
 
-class LoadBalancingBackend(AbstractBackend):
+class LoadBalancingBackend(Backend):
     @property
     def infile(self):
         return os.path.join(self.workdir, 'in' + self.task.store.ext)
@@ -645,10 +680,9 @@ from psyrun.processing import LoadBalancingWorker
 pspace = task.pspace
 if {cont!r}:
     if os.path.exists({outfile!r}):
-        pspace = missing(pspace, Param.from_dict(task.store.load({outfile!r})))
+        pspace = missing(pspace, Param(**task.store.load({outfile!r})))
     if os.path.exists({part_outfile!r}):
-        pspace = missing(pspace, Param.from_dict(
-            task.store.load({part_outfile!r})))
+        pspace = missing(pspace, Param(**task.store.load({part_outfile!r})))
 task.store.save({infile!r}, pspace.build())
 LoadBalancingWorker.create_statusfile({statusfile!r})
         '''.format(

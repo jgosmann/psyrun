@@ -1,4 +1,4 @@
-"""Mappers to map functions onto parameter spaces."""
+"""Map functions onto parameter spaces."""
 
 import os.path
 
@@ -8,20 +8,20 @@ from psyrun.pspace import dict_concat, missing, Param
 def get_result(fn, params):
     """Evaluates a function with given parameters.
 
-    Evaluates `fn` with the parameters `param` and returns a dictionary with
+    Evaluates *fn* with the parameters *param* and returns a dictionary with
     the input parameters and returned output values.
 
     Parameters
     ----------
     fn : function
         Function to evaluate. Has to return a dictionary.
-    params : dict
-        Parameters passed to `fn` as keyword arguments.
+    params : `dict`
+        Parameters passed to *fn* as keyword arguments.
 
     Returns
     -------
-    dict
-        Returns `params` updated with the return value of `fn`.
+    `dict`
+        Returns *params* updated with the return value of *fn*.
 
     Examples
     --------
@@ -44,12 +44,12 @@ def map_pspace(fn, pspace):
     ----------
     fn : function
         Function to evaluate on parameter space. Has to return a dictionary.
-    pspace : :class:`.pspace._PSpaceObj`
+    pspace : `ParameterSpace`
         Parameter space providing parameter values to evaluate function on.
 
     Returns
     -------
-    dict
+    `dict`
         Dictionary with the input parameter values and the function return
         values.
 
@@ -66,6 +66,42 @@ def map_pspace(fn, pspace):
     return dict_concat(list(get_result(fn, p) for p in pspace.iterate()))
 
 
+def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
+    """Maps a function to parameter space values while storing produced data.
+
+    Data is stored progressively. Thus, if the program crashes, not all data
+    will be lost.
+
+    Parameters
+    ----------
+    fn : function
+        Function to evaluate on parameter space. Has to return a dictionary.
+    pspace : `ParameterSpace`
+        Parameter space providing parameter values to evaluate function on.
+    filename : `str`
+        Filename of file to store data to.
+    store : `Store`
+        Store to save data with.
+    return_data : `bool`, optional
+        Whether to return the resulting data after mapping the function. This
+        will read all produced data from the disk.
+
+    Returns
+    -------
+    `None` or `dict`
+        Dictionary with the input parameter values and the function return
+        values if requested.
+    """
+    if os.path.exists(filename):
+        pspace = missing(pspace, Param(**store.load(filename)))
+    for p in pspace.iterate():
+        store.append(filename, dict_concat((get_result(fn, p),)))
+    if not os.path.exists(filename):
+        store.save(filename, {})
+    if return_data:
+        return store.load(filename)
+
+
 def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     """Maps a function to parameter space values in parallel.
 
@@ -75,18 +111,18 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     ----------
     fn : function
         Function to evaluate on parameter space. Has to return a dictionary.
-    pspace : :class:`.pspace._PSpaceObj`
+    pspace : `ParameterSpace`
         Parameter space providing parameter values to evaluate function on.
-    n_jobs : int, optional
+    n_jobs : `int`, optional
         Number of parallel jobs. Set to -1 to automatically determine.
-    backend : str, optional
+    backend : `str`, optional
         Backend to use. See `joblib documentation
         <https://pythonhosted.org/joblib/parallel.html#using-the-threading-backend>`_
         for details.
 
     Returns
     -------
-    dict
+    `dict`
         Dictionary with the input parameter values and the function return
         values.
 
@@ -103,37 +139,3 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     parallel = joblib.Parallel(n_jobs=n_jobs, backend=backend)
     return dict_concat(parallel(
         joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
-
-
-def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
-    """Maps a function to parameter space values while storing produced data.
-
-    Data is stored progressively.
-
-    Parameters
-    ----------
-    fn : function
-        Function to evaluate on parameter space. Has to return a dictionary.
-    pspace : :class:`.pspace._PSpaceObj`
-        Parameter space providing parameter values to evaluate function on.
-    filename : str
-        Filename of file to store data to.
-    store : :class:`.store.AbstractStore`
-        Store to save data with.
-    return_data : bool, optional
-        Whether to return the resulting data after mapping the function. This
-        will read all produced data from the disk again.
-
-    Returns
-    ``None`` or dict
-        Dictionary with the input parameter values and the function return
-        values if requested.
-    """
-    if os.path.exists(filename):
-        pspace = missing(pspace, Param.from_dict(store.load(filename)))
-    for p in pspace.iterate():
-        store.append(filename, dict_concat((get_result(fn, p),)))
-    if not os.path.exists(filename):
-        store.save(filename, {})
-    if return_data:
-        return store.load(filename)

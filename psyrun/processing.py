@@ -23,7 +23,7 @@ class Splitter(object):
         Maximum number of splits to perform.
     min_items : int
         Minimum number of parameter sets in each split.
-    store : :class:`.io.AbstractStore`
+    store : `Store`
         Input/output backend.
     """
     def __init__(
@@ -80,7 +80,7 @@ class Splitter(object):
         append : bool
             If ``True`` the merged data will be appended, otherwise the file
             will be overwritten with the merged data.
-        store : :class:`AbstractStore`
+        store : `Store`
             Input/output backend.
         """
         if not append:
@@ -124,7 +124,7 @@ class Worker(object):
         Function that takes another function, a parameter space, and
         potentially further keyword arguments and returns the result of mapping
         the function onto the parameter space.
-    store : :class:`.store.AbstractStore`
+    store : `Store`
         Input/output backend.
     """
 
@@ -162,7 +162,7 @@ class LoadBalancingWorker(object):
         Filename of the file to write the results to.
     statusfile : str
         Filename of the file to track the processing progress.
-    store : class:`.store.AbstractStore`
+    store : `Store`
         Input/output backend.
     """
     def __init__(self, infile, outfile, statusfile, store=NpzStore()):
@@ -221,7 +221,7 @@ class LoadBalancingWorker(object):
         """
         while True:
             try:
-                pspace = Param.from_dict(self.get_next_param_set())
+                pspace = Param(**self.get_next_param_set())
             except IndexError:
                 return
             data = map_pspace(fn, pspace)

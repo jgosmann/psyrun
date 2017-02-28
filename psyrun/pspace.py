@@ -1,8 +1,11 @@
 """Construction of parameter spaces."""
 
+import collections
 import itertools
 
 from six import string_types
+
+from psyrun.utils.doc import inherit_docs
 
 
 def dict_concat(args):
@@ -10,12 +13,12 @@ def dict_concat(args):
 
     Parameters
     ----------
-    args : sequenece of dicts
+    args : sequenece of `dict`
         Dictionaries with sequences to concatenate.
 
     Returns
     -------
-    dict
+    `dict`
         The dictionary with the union of all the keys of the dictionaries
         passed in and elements with the same key concatenated. Missing elements
         will be ``None``.
@@ -32,11 +35,15 @@ def dict_concat(args):
     return {k: [a.get(k, None) for a in args] for k in keys}
 
 
-class _PSpaceObj(object):
+class ParameterSpace(collections.Sized):
     """Abstract base class for objects representing a parameter space.
 
     Supports addition, subtraction, and multiplication operators to construct
     more complicated parameter spaces.
+
+    Deriving classes are supposed to implement the `iterate` and `__len__`
+    methods.
+
 
     Parameters
     ----------
@@ -52,7 +59,7 @@ class _PSpaceObj(object):
 
         Returns
         -------
-        dict
+        `dict`
             A dictionary with the parameter names as keys and lists with the
             parameter values.
 
@@ -90,7 +97,7 @@ class _PSpaceObj(object):
     def __repr__(self):
         keys = sorted(self.keys())
         built = self.build()
-        return "Param.from_dict({{{params}}})".format(
+        return "Param(**{{{params}}})".format(
             params=", ".join(
                 "{k!r}: {v!r}".format(k=k, v=built[k]) for k in keys))
 
@@ -102,7 +109,8 @@ class _PSpaceObj(object):
                 "{k!s}={v!r}".format(k=k, v=built[k]) for k in keys))
 
 
-class Param(_PSpaceObj):
+@inherit_docs
+class Param(ParameterSpace):
     """Constructs a simple parameter space from constructor arguments.
 
     Supports addition, subtraction, and multiplication operators to construct
@@ -110,11 +118,11 @@ class Param(_PSpaceObj):
 
     Parameters
     ----------
-    params : scalar or sequence
+    params :
         Each keyword argument defines a parameter with a sequence of parameter
         values for it. The length of all lists has to be equal. If a scalar
         instead of a sequence is passed in, it will be replicated to match the
-        length of the other parameters. At least on keyword argument has to be
+        length of the other parameters. At least one keyword argument has to be
         a sequence.
     """
     def __init__(self, **params):
@@ -141,7 +149,6 @@ class Param(_PSpaceObj):
             self._len = 1 if len(self._params) > 0 else 0
 
     def iterate(self):
-        """Iterates over the parameter assignments in the parameter space."""
         for i in range(len(self)):
             yield {k: self.get_param(k, i) for k in self.keys()}
 
@@ -149,13 +156,13 @@ class Param(_PSpaceObj):
         return self._len
 
     def get_param(self, key, i):
-        """Return the i-th parameter assignment.
+        """Return the *i*-th parameter assignment.
 
         Parameters
         ----------
-        key : str
+        key : `str`
             Parameter name of parameter to retrieve.
-        i : int
+        i : `int`
             Index of assigned value to return.
         """
         p = self._params[key]
@@ -164,20 +171,24 @@ class Param(_PSpaceObj):
         except TypeError:
             return p
 
-    @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
 
-
-class Difference(_PSpaceObj):
+@inherit_docs
+class Difference(ParameterSpace):
     """Implements the difference of two parameter spaces.
 
     Parameters
     ----------
-    left : _PSpaceObj
-        Left operand.
-    right : _PSpaceObj
-        Right operand.
+    minuend : `ParameterSpace`
+        Minuend (left operand).
+    subtrahend : `ParameterSpace`
+        Subtrahend (right operand).
+
+    Attributes
+    ----------
+    minuend : `ParameterSpace`
+        Minuend (left operand).
+    subtrahend : `ParameterSpace`
+        Subtrahend (right operand).
 
     Examples
     --------
@@ -185,18 +196,18 @@ class Difference(_PSpaceObj):
     >>> pprint(Difference(Param(a=[1, 2], b=[1, 2]), Param(a=[1])).build())
     {'a': [2], 'b': [2]}
     """
-    def __init__(self, left, right):
-        super(Difference, self).__init__(left.keys())
-        for k in right.keys():
+
+    def __init__(self, minuend, subtrahend):
+        super(Difference, self).__init__(minuend.keys())
+        for k in subtrahend.keys():
             if k not in self._keys:
                 raise AmbiguousOperationError(
                     'Key `{0}` not existent in minuend.'.format(k))
-        self.left = left
-        self.right = right
+        self.left = minuend
+        self.right = subtrahend
         self._cached = None
 
     def iterate(self):
-        """Iterates over the parameter assignments in the parameter space."""
         if len(self.right) == 0:
             return self.left.iterate()
         if self._cached is None:
@@ -210,14 +221,22 @@ class Difference(_PSpaceObj):
         return sum(1 for item in self.iterate())
 
 
-class Product(_PSpaceObj):
-    """Implements the outer product of two parameter spaces.
+@inherit_docs
+class Product(ParameterSpace):
+    """Implements the Cartesian product of two parameter spaces.
 
     Parameters
     ----------
-    left : _PSpaceObj
+    left : `ParameterSpace`
         Left operand.
-    right : _PSpaceObj
+    right : `ParameterSpace`
+        Right operand.
+
+    Attributes
+    ----------
+    left : `ParameterSpace`
+        Left operand.
+    right : `ParameterSpace`
         Right operand.
 
     Examples
@@ -237,7 +256,6 @@ class Product(_PSpaceObj):
         self.right = right
 
     def iterate(self):
-        """Iterates over the parameter assignments in the parameter space."""
         if len(self.left.keys()) == 0:
             return self.right.iterate()
         elif len(self.right.keys()) == 0:
@@ -262,14 +280,22 @@ class Product(_PSpaceObj):
             return len(self.left) * len(self.right)
 
 
-class Sum(_PSpaceObj):
+@inherit_docs
+class Sum(ParameterSpace):
     """Implements the concatenation of two parameter spaces.
 
     Parameters
     ----------
-    left : _PSpaceObj
+    left : `ParameterSpace`
         Left operand.
-    right : _PSpaceObj
+    right : `ParameterSpace`
+        Right operand.
+
+    Attributes
+    ----------
+    left : `ParameterSpace`
+        Left operand.
+    right : `ParameterSpace`
         Right operand.
 
     Examples
@@ -284,7 +310,6 @@ class Sum(_PSpaceObj):
         self.right = right
 
     def iterate(self):
-        """Iterates over the parameter assignments in the parameter space."""
         return ({k: item.get(k, float('nan')) for k in self.keys()}
                 for item in itertools.chain(
                     self.left.iterate(), self.right.iterate()))
@@ -301,14 +326,14 @@ def missing(minuend, subtrahend):
 
     Parameters
     ----------
-    minuend : :class:`Param`
+    minuend : `ParameterSpace`
         Parameter space with all assignments.
     subtrahend : :class:`Param`
         Parameter space with assignments to remove from the parameter space.
 
     Returns
     -------
-    :class:`Param`
+    `ParameterSpace`
         The reduced parameter space.
 
     Examples
@@ -322,10 +347,10 @@ def missing(minuend, subtrahend):
     for k in minuend.keys():
         if k not in subtrahend.keys():
             raise AmbiguousOperationError()
-    return minuend - Param.from_dict(
-        {k: v for k, v in subtrahend.build().items() if k in minuend.keys()})
+    return minuend - Param(
+        **{k: v for k, v in subtrahend.build().items() if k in minuend.keys()})
 
 
 class AmbiguousOperationError(RuntimeError):
-    """Two parameter space were tried to combined in an ambiguous way."""
+    """Attempt to combine two parameter spaces in an ambiguous way."""
     pass

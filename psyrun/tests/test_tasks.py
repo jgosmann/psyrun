@@ -22,7 +22,7 @@ class TaskEnv(object):
         self.workdir = os.path.join(str(tmpdir), 'work')
 
         shutil.copytree(TASKDIR, self.taskdir)
-        with open(os.path.join(self.taskdir, 'psyconf.py'), 'w') as f:
+        with open(os.path.join(self.taskdir, 'psy-conf.py'), 'w') as f:
             f.write('workdir = {0!r}'.format(self.workdir))
 
 
@@ -133,7 +133,7 @@ def test_allows_to_clean_results(taskenv):
 
 def test_psyrun_workdir_contents(taskenv):
     workdir = os.path.join('psy-work', 'square')
-    os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
+    os.remove(os.path.join(taskenv.taskdir, 'psy-conf.py'))
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     assert os.path.exists(os.path.join(workdir, 'in', '0.pkl'))
     assert os.path.exists(os.path.join(workdir, 'out', '0.pkl'))
@@ -148,7 +148,7 @@ def test_psyrun_workdir_contents(taskenv):
 
 def test_psyrun_workdir_contents_load_balanced(taskenv):
     workdir = os.path.join('psy-work', 'square_load_balanced')
-    os.remove(os.path.join(taskenv.taskdir, 'psyconf.py'))
+    os.remove(os.path.join(taskenv.taskdir, 'psy-conf.py'))
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square_load_balanced'])
     assert os.path.exists(os.path.join(workdir, 'in.pkl'))
     assert os.path.exists(os.path.join(workdir, 'result.pkl'))

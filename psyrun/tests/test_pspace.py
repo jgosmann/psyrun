@@ -60,7 +60,7 @@ class TestParam(object):
 
     def test_from_dict(self):
         d = {'a': [1, 2], 'b.x': 3, 'b.y': [4, 5]}
-        space = Param.from_dict(d).build()
+        space = Param(**d).build()
         assert space['a'] == [1, 2]
         assert space['b.x'] == [3, 3]
         assert space['b.y'] == [4, 5]
@@ -68,18 +68,18 @@ class TestParam(object):
     def test_hierarchical(self):
         d1 = {'root.a': [1, 2], 'b': [3, 4]}
         d2 = {'root.b': [5, 6]}
-        space = (Param.from_dict(d1) * Param.from_dict(d2)).build()
+        space = (Param(**d1) * Param(**d2)).build()
         assert space['root.a'] == [1, 1, 2, 2]
         assert space['b'] == [3, 3, 4, 4]
         assert space['root.b'] == [5, 6, 5, 6]
 
     def test_str(self):
-        p = Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})
+        p = Param(**{'a': [1, 2], 'b.b': [3, 4]})
         assert str(p) == "Param(a=[1, 2], b.b=[3, 4])"
 
     def test_rep(self):
-        p = Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})
-        assert repr(p) == "Param.from_dict({'a': [1, 2], 'b.b': [3, 4]})"
+        p = Param(**{'a': [1, 2], 'b.b': [3, 4]})
+        assert repr(p) == "Param(**{'a': [1, 2], 'b.b': [3, 4]})"
 
 
 class TestProduct(object):

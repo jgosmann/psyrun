@@ -1,51 +1,23 @@
-"""Backends to store load and store data."""
+"""Stores are used to persist and load data."""
 
 import errno
 
-import numpy as np
 from six import string_types
 from six.moves import cPickle as pickle
 
+from psyrun.utils.doc import inherit_docs
 
-class AbstractStore(object):
-    """Base class for classes implementing a store.
+
+class Store(object):
+    """Defines the interface of stores.
 
     Attributes
     ----------
-    ext : str
+    ext : `str`
         Filename extension used by the store.
     """
 
     ext = ''
-
-    def save(self, filename, data):
-        """Save data to a file.
-
-        Parameters
-        ----------
-        filename : str
-            Filename of file to save data to.
-        data : dict
-            Dictionary with data to store.
-        """
-        raise NotImplementedError()
-
-    def load(self, filename, row=None):
-        """Load data from a file.
-
-        Parameters
-        ----------
-        filename : str
-            Filename of file to load data from.
-        row : int, optional
-            If given, only the row with this index will be loaded.
-
-        Returns
-        -------
-        dict
-            Loaded data.
-        """
-        raise NotImplementedError()
 
     def append(self, filename, data):
         """Append data to file.
@@ -56,16 +28,51 @@ class AbstractStore(object):
 
         Parameters
         ----------
-        filename : str
+        filename : `str`
             Filename of file to append the data to.
-        data : dict
+        data : `dict`
             Dictionary with data to append.
         """
         raise NotImplementedError()
 
+    def save(self, filename, data):
+        """Save data to a file.
 
-class PickleStore(AbstractStore):
-    """Store using Python pickle `.pkl` files."""
+        Parameters
+        ----------
+        filename : `str`
+            Filename of file to save data to.
+        data : `dict`
+            Dictionary with data to store.
+        """
+        raise NotImplementedError()
+
+    def load(self, filename, row=None):
+        """Load data from a file.
+
+        Parameters
+        ----------
+        filename : `str`
+            Filename of file to load data from.
+        row : `int`, optional
+            If given, only the row with this index will be loaded.
+
+        Returns
+        -------
+        `dict`
+            Loaded data.
+        """
+        raise NotImplementedError()
+
+
+@inherit_docs
+class PickleStore(Store):
+    """Store using Python pickle *.pkl* files.
+
+    It supports all pickle-able data types and has no additional dependencies,
+    but is not the most efficient store. Also, it has to load the complete
+    file to append to it.
+    """
 
     ext = '.pkl'
 
@@ -123,22 +130,28 @@ class PickleStore(AbstractStore):
             self.save(filename, loaded)
 
 
-class NpzStore(AbstractStore):
-    """Store using NumPy `.npz` files.
+@inherit_docs
+class NpzStore(Store):
+    """Store using NumPy *.npz* files.
 
-    This backend needs to load all data in a file to append to it. Similarly,
+    Requires `NumPy <http://www.numpy.org/>`_.
+
+    This store needs to load all data in a file to append to it. Similarly,
     individual rows from a data file can only be returned by loading the whole
-    file. Thus, this backend is not recommended to be used with applications
-    that produce large amounts of data or with load balancing if the parameter
-    space is large.
+    file. Thus, this store is not recommended to be used with applications
+    that produce large amounts of data or with the `LoadBalancingBackend` if
+    the parameter space is large. It is however more efficient than the
+    `PickleStore`.
     """
 
     ext = '.npz'
 
     def save(self, filename, data):
+        import numpy as np
         np.savez(filename, **data)
 
     def load(self, filename, row=None):
+        import numpy as np
         try:
             with np.load(filename) as data:
                 if row is None:
@@ -152,6 +165,7 @@ class NpzStore(AbstractStore):
                 raise
 
     def append(self, filename, data):
+        import numpy as np
         try:
             loaded = self.load(filename)
         except IOError as err:
@@ -174,16 +188,19 @@ class NpzStore(AbstractStore):
         self.save(filename, loaded)
 
 
-class H5Store(AbstractStore):
+@inherit_docs
+class H5Store(Store):
     """Store using the HDF5 format.
 
     This store allows for efficient appending as long as the dimensions match.
 
-    Requires pytables to be installed.
+    Requires `NumPy <http://www.numpy.org/>`_ and
+    `PyTables <http://www.pytables.org/>`_ . Only numeric data types are
+    supported.
 
     Parameters
     ----------
-    node : str, optional
+    node : `str`, optional
         Node in the HDF5 file to store the data at.
     """
 
@@ -207,6 +224,7 @@ class H5Store(AbstractStore):
                 self.node)}
 
     def append(self, filename, data):
+        import numpy as np
         import tables
         with tables.open_file(filename, 'a') as h5:
             for k, v in data.items():
@@ -237,6 +255,7 @@ class H5Store(AbstractStore):
 
     @classmethod
     def _ensure_supported(cls, v):
+        import numpy as np
         dtype = np.asarray(v).dtype
         if dtype.kind in 'OSU':
             raise NotImplementedError(
@@ -255,6 +274,8 @@ def _min_shape(args):
 
 
 def _match_shape(a, shape):
+    import numpy as np
+
     a = np.asarray(a)
     if a.shape == ():
         a = np.asarray([a])
