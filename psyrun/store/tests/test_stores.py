@@ -2,7 +2,9 @@ import pytest
 
 import numpy as np
 
-from psyrun.store import H5Store, NpzStore, PickleStore
+from psyrun.store.h5 import H5Store
+from psyrun.store.npz import NpzStore
+from psyrun.store.pickle import PickleStore
 from psyrun.pspace import Param
 
 
@@ -52,6 +54,7 @@ class TestDictStores(object):
         assert np.all(saved['a'][0][:1, :2] == data1['a'][0])
         assert np.all(saved['a'][1][:2, :1] == data2['a'][0])
         assert np.all(saved['a'][2][:2, :1] == data2['a'][1])
+
 
 @pytest.mark.parametrize('store', [NpzStore(), PickleStore()])
 class TestStringStoring(object):

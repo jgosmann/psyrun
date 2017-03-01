@@ -3,9 +3,9 @@ import os.path
 
 import pytest
 
-from psyrun.store import PickleStore, NpzStore, H5Store
+from psyrun.store import DefaultStore
+from psyrun.backend.distribute import Splitter, Worker
 from psyrun.pspace import Param
-from psyrun.processing import Splitter, Worker, LoadBalancingWorker
 
 
 def square(a):
@@ -35,34 +35,20 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            PickleStore().save(outfile, PickleStore().load(infile))
+            DefaultStore().save(outfile, DefaultStore().load(infile))
 
         result_file = os.path.join(str(tmpdir), 'result.npz')
         Splitter.merge(splitter.outdir, result_file)
-        result = PickleStore().load(result_file)
+        result = DefaultStore().load(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))
 
 
 def test_worker(tmpdir):
     infile = str(tmpdir.join('in.npz'))
     outfile = str(tmpdir.join('out.npz'))
-    PickleStore().save(infile, Param(a=range(7)).build())
-    worker = Worker(PickleStore())
+    DefaultStore().save(infile, Param(a=range(7)).build())
+    worker = Worker(DefaultStore())
     worker.start(square, infile, outfile)
-    result = PickleStore().load(outfile)
-    assert sorted(result['a']) == sorted(range(7))
-    assert sorted(result['x']) == [i ** 2 for i in range(7)]
-
-
-@pytest.mark.parametrize('store', [PickleStore(), NpzStore(), H5Store()])
-def test_load_balancing_worker(tmpdir, store):
-    infile = str(tmpdir.join('in.npz'))
-    outfile = str(tmpdir.join('out.npz'))
-    statusfile = str(tmpdir.join('status'))
-    store.save(infile, Param(a=range(7)).build())
-    LoadBalancingWorker.create_statusfile(statusfile)
-    worker = LoadBalancingWorker(infile, outfile, statusfile, store)
-    worker.start(square)
-    result = store.load(outfile)
+    result = DefaultStore().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

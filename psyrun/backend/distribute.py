@@ -1,12 +1,134 @@
-"""File-based processing of parameter spaces."""
+"""Backend for distributed parameter evaluation."""
 
-import fcntl
 import os
-import os.path
 
-from psyrun.store import PickleStore
-from psyrun.mapper import map_pspace, map_pspace_hdd_backed
-from psyrun.pspace import dict_concat, Param
+from psyrun.backend.base import Backend
+from psyrun.jobs import Job, JobChain, JobGroup
+from psyrun.pspace import dict_concat, missing, Param
+from psyrun.mapper import map_pspace_hdd_backed
+from psyrun.store import DefaultStore
+from psyrun.utils.doc import inherit_docs
+
+
+@inherit_docs
+class DistributeBackend(Backend):
+    """Create subtasks for distributed parameter evaluation.
+
+    This will create one tasks that splits the parameter space in a number of
+    equal batches (at most *max_jobs*, but with at least *min_items* for each
+    batch). After processing all batches the results will be merged into a
+    single file.
+
+    This is similar to map-reduce processing.
+
+    Parameters
+    ----------
+    task : `TaskDef`
+        Task definition to create subtasks for.
+    """
+
+    @property
+    def resultfile(self):
+        """File in which the results will be stored."""
+        if self.task.resultfile:
+            return self.task.resultfile
+        else:
+            return os.path.join(
+                self.workdir, 'result' + self.task.store.ext)
+
+    @property
+    def pspace_file(self):
+        """File that will store the input parameters space."""
+        return os.path.join(self.workdir, 'pspace' + self.task.store.ext)
+
+    def _try_mv_to_out(self, filename):
+        try:
+            os.rename(
+                os.path.join(self.workdir, filename),
+                os.path.join(self.workdir, 'out', filename))
+        except OSError:
+            pass
+
+    def create_job(self, cont=False):
+        if cont:
+            outdir = os.path.join(self.workdir, 'out')
+            self._try_mv_to_out('result' + self.task.store.ext)
+            Splitter.merge(
+                outdir, os.path.join(outdir, 'pre' + self.task.store.ext))
+            for filename in os.listdir(outdir):
+                if not filename.startswith('pre'):
+                    os.remove(os.path.join(outdir, filename))
+            pspace = self.get_missing()
+        else:
+            pspace = self.task.pspace
+
+        self.task.store.save(self.pspace_file, pspace.build())
+        splitter = Splitter(
+            self.workdir, pspace, self.task.max_jobs, self.task.min_items,
+            store=self.task.store)
+
+        split = self.create_split_job(splitter)
+        process = self.create_process_job(splitter)
+        merge = self.create_merge_job(splitter)
+        return JobChain(self.task.name, [split, process, merge])
+
+    def create_split_job(self, splitter):
+        code = '''
+from psyrun.backend.distribute import Splitter
+from psyrun.pspace import Param
+pspace = Param(**task.store.load({pspace!r}))
+Splitter(
+    {workdir!r}, pspace, {max_jobs!r}, {min_items!r},
+    store=task.store).split()
+        '''.format(
+            pspace=self.pspace_file,
+            workdir=splitter.workdir, max_jobs=self.task.max_jobs,
+            min_items=self.task.min_items)
+        file_dep = [os.path.join(os.path.dirname(self.task.path), f)
+                    for f in self.task.file_dep]
+        return Job(
+            'split', self.submit, code, [self.task.path] + file_dep,
+            [f for f, _ in splitter.iter_in_out_files()])
+
+    def create_process_job(self, splitter):
+        jobs = []
+        for i, (infile, outfile) in enumerate(
+                splitter.iter_in_out_files()):
+            code = '''
+from psyrun.backend.distribute import Worker
+execute = task.execute
+Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
+            '''.format(infile=infile, outfile=outfile)
+            jobs.append(Job(str(i), self.submit, code, [infile], [outfile]))
+
+        group = JobGroup('process', jobs)
+        return group
+
+    def create_merge_job(self, splitter):
+        code = '''
+from psyrun.backend.distribute import Splitter
+Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
+        '''.format(outdir=splitter.outdir, filename=self.resultfile)
+        return Job(
+            'merge', self.submit, code,
+            [f for _, f in splitter.iter_in_out_files()], [self.resultfile])
+
+    def get_missing(self):
+        pspace = self.task.pspace
+        try:
+            missing_items = missing(
+                pspace, Param(**self.task.store.load(self.resultfile)))
+        except IOError:
+            missing_items = pspace
+            for filename in os.path.join(self.workdir, 'out'):
+                outfile = os.path.join(self.workdir, 'out', filename)
+                try:
+                    missing_items = missing(
+                        missing_items,
+                        Param(**self.task.store.load(outfile)))
+                except IOError:
+                    pass
+        return missing_items
 
 
 class Splitter(object):
@@ -45,7 +167,7 @@ class Splitter(object):
     """
     def __init__(
             self, workdir, pspace, max_splits=64, min_items=4,
-            store=PickleStore()):
+            store=DefaultStore()):
         self.workdir = workdir
         self.indir = self._get_indir(workdir)
         self.outdir = self._get_outdir(workdir)
@@ -85,7 +207,7 @@ class Splitter(object):
             self.store.save(os.path.join(self.indir, filename), block)
 
     @classmethod
-    def merge(cls, outdir, merged_filename, append=True, store=PickleStore()):
+    def merge(cls, outdir, merged_filename, append=True, store=DefaultStore()):
         """Merge processed files together.
 
         Parameters
@@ -146,7 +268,7 @@ class Worker(object):
         Input/output backend.
     """
 
-    def __init__(self, store=PickleStore()):
+    def __init__(self, store=DefaultStore()):
         self.store = store
 
     def start(self, fn, infile, outfile):
@@ -167,87 +289,3 @@ class Worker(object):
             fn, pspace, out_root + '.part' + out_ext, store=self.store,
             return_data=False)
         os.rename(out_root + '.part' + out_ext, outfile)
-
-
-class LoadBalancingWorker(object):
-    """Maps a function to the parameter space supporting other
-    *LoadBalancingWorkers* processing the same input file at the same time.
-
-    Parameters
-    ----------
-    infile : `str`
-        Filename of the file with the input parameters space.
-    outfile : `str`
-        Filename of the file to write the results to.
-    statusfile : `str`
-        Filename of the file to track the processing progress.
-    store : `Store`, optional
-        Input/output backend.
-    """
-    def __init__(self, infile, outfile, statusfile, store=PickleStore()):
-        self.infile = infile
-        self.outfile = outfile
-        self.statusfile = statusfile
-        self.store = store
-
-    @classmethod
-    def create_statusfile(cls, statusfile):
-        """Creates the status file required by all load balancing workers.
-
-        Parameters
-        ----------
-        statusfile : `str`
-            Filename of the status file.
-        """
-        with open(statusfile, 'w') as f:
-            f.write('0')
-            f.flush()
-
-    def get_next_ix(self):
-        """Get the index of the next parameter assignment to process."""
-        with open(self.statusfile, 'r+') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                ix = int(f.read())
-                f.seek(0)
-                f.truncate(0)
-                f.write(str(ix + 1))
-                f.flush()
-            finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
-        return ix
-
-    def get_next_param_set(self):
-        """Load the next parameter assignment to process."""
-        return self.store.load(self.infile, row=self.get_next_ix())
-
-    def save_data(self, data):
-        """Appends data to the *outfile*.
-
-        Uses a lock on the file to support concurrent access.
-        """
-        with open(self.statusfile + '.lock', 'w') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            try:
-                self.store.append(self.outfile, data)
-            finally:
-                fcntl.flock(lock, fcntl.LOCK_UN)
-
-    def start(self, fn):
-        """Start processing a parameter space.
-
-        A status file needs to be created before invoking this function by
-        calling `create_statusfile`.
-
-        Parameters
-        ----------
-        fn : function
-            Function to evaluate on the parameter space.
-        """
-        while True:
-            try:
-                pspace = Param(**self.get_next_param_set())
-            except IndexError:
-                return
-            data = map_pspace(fn, pspace)
-            self.save_data(data)

@@ -6,9 +6,11 @@ import time
 import pytest
 
 from psyrun.main import psy_main
-from psyrun.store import H5Store, NpzStore, PickleStore
-from psyrun.tasks import (
-    TaskDef, Config, JobsRunningWarning, TaskWorkdirDirtyWarning)
+from psyrun.exceptions import JobsRunningWarning, TaskWorkdirDirtyWarning
+from psyrun.store.h5 import H5Store
+from psyrun.store.npz import NpzStore
+from psyrun.store.pickle import PickleStore
+from psyrun.tasks import TaskDef, Config
 from psyrun.utils.mockscheduler import MockScheduler
 
 

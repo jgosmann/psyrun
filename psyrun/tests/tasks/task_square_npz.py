@@ -1,5 +1,5 @@
 from psyrun import Param
-from psyrun.store import NpzStore
+from psyrun.store.npz import NpzStore
 
 
 pspace = Param(x=range(4))

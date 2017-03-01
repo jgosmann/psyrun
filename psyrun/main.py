@@ -3,9 +3,10 @@ import os.path
 import shutil
 import warnings
 
-from psyrun.processing import Splitter
-from psyrun.tasks import (
-    Clean, Fullname, PackageLoader, Submit, TaskWorkdirDirtyWarning, Uptodate)
+from psyrun.backend.distribute import Splitter
+from psyrun.exceptions import TaskWorkdirDirtyWarning
+from psyrun.jobs import Clean, Fullname, Submit, Uptodate
+from psyrun.tasks import PackageLoader
 from psyrun.utils.venv import init_virtualenv
 
 
