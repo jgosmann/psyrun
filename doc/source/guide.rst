@@ -111,7 +111,7 @@ pickled (e.g., it can be imported from a Python module), you can use
 :func:`.map_pspace_parallel` to parallelize the evaluation of parameter sets.
 
 >>> from psyrun import map_pspace_parallel
->>> from psyrun.example import square
+>>> from psyrun.utils.example import square
 >>> pprint(map_pspace_parallel(square, Param(x=[1, 2, 3])))
 {'x': [1, 2, 3], 'y': [1, 4, 9]}
 

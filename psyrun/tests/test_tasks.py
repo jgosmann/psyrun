@@ -9,7 +9,7 @@ from psyrun.main import psy_main
 from psyrun.store import H5Store, NpzStore, PickleStore
 from psyrun.tasks import (
     TaskDef, Config, JobsRunningWarning, TaskWorkdirDirtyWarning)
-from psyrun.mockscheduler import MockScheduler
+from psyrun.utils.mockscheduler import MockScheduler
 
 
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')

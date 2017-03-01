@@ -6,7 +6,7 @@ import warnings
 from psyrun.processing import Splitter
 from psyrun.tasks import (
     Clean, Fullname, PackageLoader, Submit, TaskWorkdirDirtyWarning, Uptodate)
-from psyrun.venv import init_virtualenv
+from psyrun.utils.venv import init_virtualenv
 
 
 commands = {}

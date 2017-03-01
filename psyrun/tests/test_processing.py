@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from psyrun.store import NpzStore, H5Store
+from psyrun.store import PickleStore, NpzStore, H5Store
 from psyrun.pspace import Param
 from psyrun.processing import Splitter, Worker, LoadBalancingWorker
 
@@ -35,34 +35,34 @@ class TestSplitter(object):
         for filename in os.listdir(splitter.indir):
             infile = os.path.join(splitter.indir, filename)
             outfile = os.path.join(splitter.outdir, filename)
-            NpzStore().save(outfile, NpzStore().load(infile))
+            PickleStore().save(outfile, PickleStore().load(infile))
 
         result_file = os.path.join(str(tmpdir), 'result.npz')
         Splitter.merge(splitter.outdir, result_file)
-        result = NpzStore().load(result_file)
+        result = PickleStore().load(result_file)
         assert sorted(result['x']) == sorted(range(pspace_size))
 
 
 def test_worker(tmpdir):
     infile = str(tmpdir.join('in.npz'))
     outfile = str(tmpdir.join('out.npz'))
-    NpzStore().save(infile, Param(a=range(7)).build())
-    worker = Worker(NpzStore())
+    PickleStore().save(infile, Param(a=range(7)).build())
+    worker = Worker(PickleStore())
     worker.start(square, infile, outfile)
-    result = NpzStore().load(outfile)
+    result = PickleStore().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]
 
 
-@pytest.mark.parametrize('io', [NpzStore(), H5Store()])
-def test_load_balancing_worker(tmpdir, io):
+@pytest.mark.parametrize('store', [PickleStore(), NpzStore(), H5Store()])
+def test_load_balancing_worker(tmpdir, store):
     infile = str(tmpdir.join('in.npz'))
     outfile = str(tmpdir.join('out.npz'))
     statusfile = str(tmpdir.join('status'))
-    io.save(infile, Param(a=range(7)).build())
+    store.save(infile, Param(a=range(7)).build())
     LoadBalancingWorker.create_statusfile(statusfile)
-    worker = LoadBalancingWorker(infile, outfile, statusfile, io)
+    worker = LoadBalancingWorker(infile, outfile, statusfile, store)
     worker.start(square)
-    result = io.load(outfile)
+    result = store.load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

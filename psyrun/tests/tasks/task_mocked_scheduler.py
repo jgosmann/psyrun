@@ -1,5 +1,5 @@
 from psyrun import Param
-from psyrun.mockscheduler import MockScheduler
+from psyrun.utils.mockscheduler import MockScheduler
 
 
 scheduler = MockScheduler('jobfile')
