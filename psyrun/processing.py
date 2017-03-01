@@ -4,7 +4,7 @@ import fcntl
 import os
 import os.path
 
-from psyrun.store import NpzStore
+from psyrun.store import PickleStore
 from psyrun.mapper import map_pspace, map_pspace_hdd_backed
 from psyrun.pspace import dict_concat, Param
 
@@ -15,20 +15,37 @@ class Splitter(object):
 
     Parameters
     ----------
-    workdir : str
+    workdir : `str`
         Working directory to create input files in and read output files from.
-    pspace : :class:`._PSpaceObj`
+    pspace : `ParameterSpace`
         Parameter space to split up.
-    max_splits : int
+    max_splits : `int`, optional
         Maximum number of splits to perform.
-    min_items : int
+    min_items : `int`, optional
         Minimum number of parameter sets in each split.
+    store : `Store`, optional
+        Input/output backend.
+
+    Attributes
+    ----------
+    indir : `str`
+        Directory to store input files.
+    max_splits : `int`
+        Maximum number of splits to perform.
+    min_items : `int`
+        Minimum number of parameter sets in each split.
+    outdir : `str`
+        Directory to store output files.
+    pspace : `ParameterSpace`
+        Parameter space to split up.
     store : `Store`
         Input/output backend.
+    workdir : `str`
+        Working directory to create input files in and read output files from.
     """
     def __init__(
             self, workdir, pspace, max_splits=64, min_items=4,
-            store=NpzStore()):
+            store=PickleStore()):
         self.workdir = workdir
         self.indir = self._get_indir(workdir)
         self.outdir = self._get_outdir(workdir)
@@ -68,19 +85,19 @@ class Splitter(object):
             self.store.save(os.path.join(self.indir, filename), block)
 
     @classmethod
-    def merge(cls, outdir, merged_filename, append=True, store=NpzStore()):
+    def merge(cls, outdir, merged_filename, append=True, store=PickleStore()):
         """Merge processed files together.
 
         Parameters
         ----------
-        outdir : str
+        outdir : `str`
             Directory with the output files.
-        merged_filename : str
+        merged_filename : `str`
             Filename of file to save with the merged results.
-        append : bool
+        append : `bool`, optional
             If ``True`` the merged data will be appended, otherwise the file
             will be overwritten with the merged data.
-        store : `Store`
+        store : `Store`, optional
             Input/output backend.
         """
         if not append:
@@ -120,15 +137,16 @@ class Worker(object):
 
     Parameters
     ----------
-    mapper : function
-        Function that takes another function, a parameter space, and
-        potentially further keyword arguments and returns the result of mapping
-        the function onto the parameter space.
+    store : `Store`, optional
+        Input/output backend.
+
+    Attributes
+    ----------
     store : `Store`
         Input/output backend.
     """
 
-    def __init__(self, store=NpzStore()):
+    def __init__(self, store=PickleStore()):
         self.store = store
 
     def start(self, fn, infile, outfile):
@@ -138,9 +156,9 @@ class Worker(object):
         ----------
         fn : function
             Function to evaluate on the parameter space.
-        infile : str
+        infile : `str`
             Parameter space input filename.
-        outfile : str
+        outfile : `str`
             Output filename for the results.
         """
         pspace = Param(**self.store.load(infile))
@@ -152,20 +170,21 @@ class Worker(object):
 
 
 class LoadBalancingWorker(object):
-    """Maps a function to the parameter space supporting other parallel workers.
+    """Maps a function to the parameter space supporting other
+    *LoadBalancingWorkers* processing the same input file at the same time.
 
     Parameters
     ----------
-    infile : str
+    infile : `str`
         Filename of the file with the input parameters space.
-    outfile : str
+    outfile : `str`
         Filename of the file to write the results to.
-    statusfile : str
+    statusfile : `str`
         Filename of the file to track the processing progress.
-    store : `Store`
+    store : `Store`, optional
         Input/output backend.
     """
-    def __init__(self, infile, outfile, statusfile, store=NpzStore()):
+    def __init__(self, infile, outfile, statusfile, store=PickleStore()):
         self.infile = infile
         self.outfile = outfile
         self.statusfile = statusfile
@@ -177,7 +196,7 @@ class LoadBalancingWorker(object):
 
         Parameters
         ----------
-        statusfile : str
+        statusfile : `str`
             Filename of the status file.
         """
         with open(statusfile, 'w') as f:
@@ -185,6 +204,7 @@ class LoadBalancingWorker(object):
             f.flush()
 
     def get_next_ix(self):
+        """Get the index of the next parameter assignment to process."""
         with open(self.statusfile, 'r+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             try:
@@ -198,9 +218,14 @@ class LoadBalancingWorker(object):
         return ix
 
     def get_next_param_set(self):
+        """Load the next parameter assignment to process."""
         return self.store.load(self.infile, row=self.get_next_ix())
 
     def save_data(self, data):
+        """Appends data to the *outfile*.
+
+        Uses a lock on the file to support concurrent access.
+        """
         with open(self.statusfile + '.lock', 'w') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
@@ -212,7 +237,7 @@ class LoadBalancingWorker(object):
         """Start processing a parameter space.
 
         A status file needs to be created before invoking this function by
-        calling :func:`LoadBalancingWorker.create_statusfile`.
+        calling `create_statusfile`.
 
         Parameters
         ----------

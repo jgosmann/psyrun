@@ -19,16 +19,16 @@ class Scheduler(object):
 
         Parameters
         ----------
-        args : list
+        args : sequence
             The command and arguments to execute.
-        output_filename : str
+        output_filename : `str`
             File to write process output to.
-        name : str, optional
+        name : `str`, optional
             Name of job.
-        depends_on : list of int, optional
+        depends_on : sequence of `int`, optional
             IDs of jobs that need to finish first before the submitted job can
             be started.
-        scheduler_args : dict, optional
+        scheduler_args : `dict`, optional
             Additional arguments for the scheduler.
 
         Returns
@@ -57,12 +57,14 @@ class Scheduler(object):
 
         Returns
         -------
-        namedtuple
-            Returns a tuple with `(id, status, name)` wherein status can be
-            - `Q` for a queued job
-            - `*Q` for a queued job waiting on another job to finish
-            - `Z` for a sleeping job
-            - `D` for a completed job
+        `JobStatus`
+            Returns a tuple with *(id, status, name)* wherein status can be
+
+            * ``'Q'`` for a queued job
+            * ``'*Q'`` for a queued job waiting on another job to finish
+            * ``'Z'`` for a sleeping job
+            * ``'D'`` for a completed job
+
             If no status data is available for the job ID, ``None`` will be
             returned.
         """
@@ -73,7 +75,7 @@ class Scheduler(object):
 
         Returns
         -------
-        list
+        sequence
             Job IDs
         """
         raise NotImplementedError()
@@ -92,20 +94,20 @@ class ImmediateRun(Scheduler):
 
         Parameters
         ----------
-        args : list
+        args : sequence
             The command and arguments to execute.
-        output_filename : str
+        output_filename : `str`
             File to write process output to.
-        name : str, optional
+        name
             Unused.
-        depends_on : list of int, optional
+        depends_on
             Unused
-        scheduler_args : ``None``, optional
+        scheduler_args
             Unused.
 
         Returns
         -------
-        int
+        `int`
             Job ID
         """
         self._cur_id += 1
