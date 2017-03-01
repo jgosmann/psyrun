@@ -13,15 +13,15 @@ def dict_concat(args):
 
     Parameters
     ----------
-    args : sequenece of `dict`
+    args : sequenece of dict
         Dictionaries with sequences to concatenate.
 
     Returns
     -------
-    `dict`
+    dict
         The dictionary with the union of all the keys of the dictionaries
         passed in and elements with the same key concatenated. Missing elements
-        will be ``None``.
+        will be None.
 
     Examples
     --------
@@ -59,7 +59,7 @@ class ParameterSpace(collections.Sized):
 
         Returns
         -------
-        `dict`
+        dict
             A dictionary with the parameter names as keys and lists with the
             parameter values.
 
@@ -160,9 +160,9 @@ class Param(ParameterSpace):
 
         Parameters
         ----------
-        key : `str`
+        key : str
             Parameter name of parameter to retrieve.
-        i : `int`
+        i : int
             Index of assigned value to return.
         """
         p = self._params[key]

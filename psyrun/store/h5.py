@@ -20,7 +20,7 @@ class H5Store(Store):
 
     Parameters
     ----------
-    node : `str`, optional
+    node : str, optional
         Node in the HDF5 file to store the data at.
     """
 

@@ -14,30 +14,30 @@ class Job(object):
 
     Parameters
     ----------
-    name : `str`
+    name : str
         Name of the job.
     submit_fn : function
         Function to use to submit the job for processing.
-    code : `str`
+    code : str
         Python code to execute.
     dependencies : sequence
         Identifiers of other jobs that need to finish first before this job
         can be run.
-    targets : sequence of `str`
+    targets : sequence of str
         Files created by this job.
 
     Attributes
     ----------
-    name : `str`
+    name : str
         Name of the job.
     submit_fn : function
         Function to use to submit the job for processing.
-    code : `str`
+    code : str
         Python code to execute.
     dependencies : sequence
         Identifiers of other jobs that need to finish first before this job
         can be run.
-    targets : sequence of `str`
+    targets : sequence of str
         Files created by this job.
     """
     def __init__(self, name, submit_fn, code, dependencies, targets):
@@ -53,21 +53,21 @@ class JobChain(object):
 
     Parameters
     ----------
-    name : `str`
+    name : str
         Name of the job chain.
-    jobs : sequence of `Job`
+    jobs : sequence of Job
         Jobs to run in succession.
 
     Attributes
     ----------
-    name : `str`
+    name : str
         Name of the job chain.
-    jobs : sequence of `Job`
+    jobs : sequence of Job
         Jobs to run in succession.
     dependencies : sequence
         Jobs that need to run first before the job chain can be run (equivalent
         to the dependencies of the first job in the chain).
-    targets : sequence of `str`
+    targets : sequence of str
         Files created or updated by the job chain (equivalent to the targets
         of the last job in the chain).
     """
@@ -89,21 +89,21 @@ class JobGroup(object):
 
     Parameters
     ----------
-    name : `str`
+    name : str
         Name of the job group.
-    jobs : sequence of `Job`
+    jobs : sequence of Job
         Jobs to run in the job group.
 
     Attributes
     ----------
-    name : `str`
+    name : str
         Name of the job group.
-    jobs : sequence of `Job`
+    jobs : sequence of Job
         Jobs to run in the job group.
     dependencies : sequence
         Jobs that need to run first before the job group can be run (equivalent
         to the union of all the group's job's dependencies).
-    targets : sequence of `str`
+    targets : sequence of str
         Files that will be created or updated by the group's jobs (equivalent
         to the union of all the group's job's targets).
     """
@@ -169,9 +169,9 @@ class Submit(JobTreeVisitor):
 
     Attributes
     ----------
-    names : `dict`
+    names : dict
         Maps jobs to their names.
-    uptodate : `dict`
+    uptodate : dict
         Maps jobs to their up-to-date status.
     """
     def __init__(self, job, names, uptodate):
@@ -208,28 +208,28 @@ class Submit(JobTreeVisitor):
 class Clean(JobTreeVisitor):
     """Clean all target files and supporting files of jobs that are outdated.
 
-    The constructor will call `visit`.
+    The constructor will call visit.
 
     Parameters
     ----------
     job : job tree
         Tree of jobs to clean.
-    task : `TaskDef`
+    task : TaskDef
         Task that generated the job tree.
-    names : `dict`
-        Maps jobs to their names. (Can be obtained with `Fullname`.)
-    uptodate : `dict`, optional
+    names : dict
+        Maps jobs to their names. (Can be obtained with Fullname.)
+    uptodate : dict, optional
         Maps jobs to their up-to-date status.
-        (Can be obtained with `Uptodate`.)
+        (Can be obtained with Uptodate.)
         If not provided, all jobs are treated as outdated.
 
     Attributes
     ----------
-    task : `TaskDef`
+    task : TaskDef
         Task that generated the job tree.
-    names : `dict`
+    names : dict
         Maps jobs to their names.
-    uptodate : `dict`
+    uptodate : dict
         Maps jobs to their up-to-date status.
     """
     def __init__(self, job, task, names, uptodate=None):
@@ -273,7 +273,7 @@ class Fullname(JobTreeVisitor):
 
     Attributes
     ----------
-    names : `dict`
+    names : dict
         Maps jobs to their names.
     """
     def __init__(self, jobtree):
@@ -301,24 +301,24 @@ class Fullname(JobTreeVisitor):
 class Uptodate(JobTreeVisitor):
     """Determines the up-to-date status of jobs.
 
-    The constructor will call `visit`.
+    The constructor will call visit.
 
     Parameters
     ----------
     jobtree : job tree
         Tree of jobs to determine the up-to-date status for.
-    names : `dict`
-        Maps jobs to their names. (Can be obtained with `Fullname`.)
-    task : `TaskDef`
+    names : dict
+        Maps jobs to their names. (Can be obtained with Fullname.)
+    task : TaskDef
         Task that generated the job tree.
 
     Attributes
     ----------
-    names : `dict`
+    names : dict
         Maps jobs to their names.
-    task : `TaskDef`
+    task : TaskDef
         Task that generated the job tree.
-    status : `dict`
+    status : dict
         Maps jobs to their up-to-date status.
     """
     def __init__(self, jobtree, names, task):

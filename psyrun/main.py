@@ -22,7 +22,7 @@ def psy_main(argv=None, init_venv=True):
     argv : sequence of str, optional
         psyrun command line arguments.
     init_venv : bool, optional
-        Use the virtualenv active in the shell environment if set to ``True``.
+        Use the virtualenv active in the shell environment if set to True.
 
     Returns
     -------

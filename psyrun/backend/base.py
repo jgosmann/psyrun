@@ -20,7 +20,7 @@ class Backend(object):
     ----------
     task : `TaskDef`
         The task to create processing jobs for.
-    workdir : `str`
+    workdir : str
         Directory in which supporting files for processing the task are stored.
     """
 
@@ -36,9 +36,9 @@ class Backend(object):
 
         Parameters
         ----------
-        code: `str`
+        code: str
             Code to execute in job.
-        name: `str`
+        name: str
             Job name.
         depends_on: sequence
             Job IDs that have to finish before the submitted code can be

@@ -6,7 +6,7 @@ class Store(object):
 
     Attributes
     ----------
-    ext : `str`
+    ext : str
         Filename extension used by the store.
     """
 
@@ -21,9 +21,9 @@ class Store(object):
 
         Parameters
         ----------
-        filename : `str`
+        filename : str
             Filename of file to append the data to.
-        data : `dict`
+        data : dict
             Dictionary with data to append.
         """
         raise NotImplementedError()
@@ -33,9 +33,9 @@ class Store(object):
 
         Parameters
         ----------
-        filename : `str`
+        filename : str
             Filename of file to save data to.
-        data : `dict`
+        data : dict
             Dictionary with data to store.
         """
         raise NotImplementedError()
@@ -45,14 +45,14 @@ class Store(object):
 
         Parameters
         ----------
-        filename : `str`
+        filename : str
             Filename of file to load data from.
-        row : `int`, optional
+        row : int, optional
             If given, only the row with this index will be loaded.
 
         Returns
         -------
-        `dict`
+        dict
             Loaded data.
         """
         raise NotImplementedError()

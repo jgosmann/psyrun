@@ -15,12 +15,12 @@ def get_result(fn, params):
     ----------
     fn : function
         Function to evaluate. Has to return a dictionary.
-    params : `dict`
+    params : dict
         Parameters passed to *fn* as keyword arguments.
 
     Returns
     -------
-    `dict`
+    dict
         Returns *params* updated with the return value of *fn*.
 
     Examples
@@ -49,7 +49,7 @@ def map_pspace(fn, pspace):
 
     Returns
     -------
-    `dict`
+    dict
         Dictionary with the input parameter values and the function return
         values.
 
@@ -78,17 +78,17 @@ def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
         Function to evaluate on parameter space. Has to return a dictionary.
     pspace : `ParameterSpace`
         Parameter space providing parameter values to evaluate function on.
-    filename : `str`
+    filename : str
         Filename of file to store data to.
     store : `Store`
         Store to save data with.
-    return_data : `bool`, optional
+    return_data : bool, optional
         Whether to return the resulting data after mapping the function. This
         will read all produced data from the disk.
 
     Returns
     -------
-    `None` or `dict`
+    None or dict
         Dictionary with the input parameter values and the function return
         values if requested.
     """
@@ -111,18 +111,18 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     ----------
     fn : function
         Function to evaluate on parameter space. Has to return a dictionary.
-    pspace : `ParameterSpace`
+    pspace : ParameterSpace
         Parameter space providing parameter values to evaluate function on.
-    n_jobs : `int`, optional
+    n_jobs : int, optional
         Number of parallel jobs. Set to -1 to automatically determine.
-    backend : `str`, optional
+    backend : str, optional
         Backend to use. See `joblib documentation
         <https://pythonhosted.org/joblib/parallel.html#using-the-threading-backend>`_
         for details.
 
     Returns
     -------
-    `dict`
+    dict
         Dictionary with the input parameter values and the function return
         values.
 

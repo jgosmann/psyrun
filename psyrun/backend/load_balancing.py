@@ -129,11 +129,11 @@ class LoadBalancingWorker(object):
 
     Parameters
     ----------
-    infile : `str`
+    infile : str
         Filename of the file with the input parameters space.
-    outfile : `str`
+    outfile : str
         Filename of the file to write the results to.
-    statusfile : `str`
+    statusfile : str
         Filename of the file to track the processing progress.
     store : `Store`, optional
         Input/output backend.
@@ -150,7 +150,7 @@ class LoadBalancingWorker(object):
 
         Parameters
         ----------
-        statusfile : `str`
+        statusfile : str
             Filename of the status file.
         """
         with open(statusfile, 'w') as f:

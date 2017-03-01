@@ -20,7 +20,7 @@ class TaskDef(object):
 
     Parameters
     ---------
-    path : `str`
+    path : str
         Python file to load as task.
     conf : `Config`
         Default values for task parameters.
@@ -77,34 +77,34 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     backend : `Backend`, default: `DistributeBackend`
         The processing backend which determines how work is distributed across
         jobs.
-    file_dep : sequence of `str`, default: ``[]``
+    file_dep : sequence of str, default: ``[]``
         Additional files the task depends on.
-    max_jobs : `int`, default: ``100``
+    max_jobs : int, default: 100
         Maximum number of jobs to start. With less jobs each job has to process
         more parameter assignments. It depends on the  scheduler and backend
         used to which degree these will run in parallel.
-    min_items : `int`, default: ``1``
+    min_items : int, default: 1
         Minimum number of parameter assignment to evaluate per job. If a single
         assignment is fast to evaluate, increasing this number can improve
         performance because Psyrun will not start a new job for each parameter
         assignment which can save some overhead.
-    overwrite_dirty : bool, default: `True`
+    overwrite_dirty : bool, default: True
         Whether to overwrite dirty workdirs without a warning.
     pspace : `ParameterSpace`, required
         Parameter space to evaluate.
-    python : `str`, default: ``sys.executable``
+    python : str, default: ``sys.executable``
         Path to Python interpreter to use.
-    resultfile : `str` or `None`, default: `None`
-        Path to save the results of the finished task at. If ``None``, this
+    resultfile : str or None, default: None
+        Path to save the results of the finished task at. If None, this
         defaults to ``'result.<ext>'`` in the *workdir*.
     scheduler : `Scheduler`, default: `ImmediateRun`
         Scheduler to use to submit individual jobs.
-    scheduler_args : `dict`, default: ``{}``
+    scheduler_args : dict, default: ``{}``
         Additional scheduler arguments. See the documentation of the
         scheduler for details.
     store : `Store`, default: `PickleStore`
         Input/output backend.
-    workdir : `str`, default: ``'psy-work'``
+    workdir : str, default: ``'psy-work'``
         Working directory to store results and supporting data to process the
         task.
 
@@ -135,7 +135,7 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
 
         Parameters
         ----------
-        filename : `str`
+        filename : str
             Python file to load.
         """
         conf = cls()
@@ -169,12 +169,12 @@ class PackageLoader(object):
 
     Parameters
     ----------
-    taskdir : `str`
+    taskdir : str
         Directory to load task files from.
 
     Attributes
     ----------
-    taskdir : `str`
+    taskdir : str
         Directory to load task files from.
     conf : `Config`
         Default values for module level task variables.
@@ -193,7 +193,7 @@ class PackageLoader(object):
 
         Returns
         -------
-        `list` of `TaskDef`
+        list of `TaskDef`
             Task definitions.
         """
         task_defs = []

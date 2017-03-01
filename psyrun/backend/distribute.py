@@ -137,32 +137,32 @@ class Splitter(object):
 
     Parameters
     ----------
-    workdir : `str`
+    workdir : str
         Working directory to create input files in and read output files from.
     pspace : `ParameterSpace`
         Parameter space to split up.
-    max_splits : `int`, optional
+    max_splits : int, optional
         Maximum number of splits to perform.
-    min_items : `int`, optional
+    min_items : int, optional
         Minimum number of parameter sets in each split.
     store : `Store`, optional
         Input/output backend.
 
     Attributes
     ----------
-    indir : `str`
+    indir : str
         Directory to store input files.
-    max_splits : `int`
+    max_splits : int
         Maximum number of splits to perform.
-    min_items : `int`
+    min_items : int
         Minimum number of parameter sets in each split.
-    outdir : `str`
+    outdir : str
         Directory to store output files.
     pspace : `ParameterSpace`
         Parameter space to split up.
     store : `Store`
         Input/output backend.
-    workdir : `str`
+    workdir : str
         Working directory to create input files in and read output files from.
     """
     def __init__(
@@ -212,12 +212,12 @@ class Splitter(object):
 
         Parameters
         ----------
-        outdir : `str`
+        outdir : str
             Directory with the output files.
-        merged_filename : `str`
+        merged_filename : str
             Filename of file to save with the merged results.
-        append : `bool`, optional
-            If ``True`` the merged data will be appended, otherwise the file
+        append : bool, optional
+            If True the merged data will be appended, otherwise the file
             will be overwritten with the merged data.
         store : `Store`, optional
             Input/output backend.
@@ -278,9 +278,9 @@ class Worker(object):
         ----------
         fn : function
             Function to evaluate on the parameter space.
-        infile : `str`
+        infile : str
             Parameter space input filename.
-        outfile : `str`
+        outfile : str
             Output filename for the results.
         """
         pspace = Param(**self.store.load(infile))
