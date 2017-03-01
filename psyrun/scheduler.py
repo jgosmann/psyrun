@@ -253,12 +253,14 @@ class Sqsub(Scheduler):
         Returns
         -------
         namedtuple or None
-            Returns a tuple with `(id, status, name)` wherein status can be
-            - `Q` for a queued job
-            - `*Q` for a queued job waiting on another job to finish
-            - `Z` for a sleeping job
-            - `D` for a completed job
-            If no status data is available for the job ID, ``None`` will be
+            Returns a tuple with *(id, status, name)* wherein status can be
+
+            - ``'Q'`` for a queued job
+            - ``'*Q'`` for a queued job waiting on another job to finish
+            - ``'Z'`` for a sleeping job
+            - ``'D'`` for a completed job
+
+            If no status data is available for the job ID, None will be
             returned.
         """
         if self._jobs is None:

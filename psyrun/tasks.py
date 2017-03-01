@@ -19,7 +19,7 @@ class TaskDef(object):
     """Task defined by a Python file.
 
     Parameters
-    ---------
+    ----------
     path : str
         Python file to load as task.
     conf : `Config`
@@ -27,7 +27,7 @@ class TaskDef(object):
 
     Attributes
     ----------
-    TASK_PATTERN : `re.RegexObject`
+    TASK_PATTERN : re.RegexObject
         Regular expression to match task filenames.
     """
 

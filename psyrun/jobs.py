@@ -161,9 +161,9 @@ class Submit(JobTreeVisitor):
     ----------
     job : job tree
         Tree of jobs to submit.
-    names : `dict`
+    names : dict
         Maps jobs to their names. (Can be obtained with `Fullname`.)
-    uptodate : `dict`
+    uptodate : dict
         Maps jobs to their up-to-date status.
         (Can be obtained with `Uptodate`.)
 

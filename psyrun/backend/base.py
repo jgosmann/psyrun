@@ -46,7 +46,7 @@ class Backend(object):
 
         Returns
         -------
-        `dict`
+        dict
             Contains the id of the submitted job under the key ``'id'``.
         """
         code = '''
@@ -85,9 +85,9 @@ task = TaskDef({taskpath!r})
 
         Parameters
         ----------
-        cont : `bool`, optional
+        cont : bool, optional
             By default old results will be discarded, but when this option is
-            set to `True`, old results will be kept and merged with the new
+            set to True, old results will be kept and merged with the new
             results.
         """
         raise NotImplementedError()

@@ -7,13 +7,13 @@ def init_virtualenv(venv=None):
     """Activates a virtual environment.
 
     This function won't initialize a virtual environment when run on Travis-CI
-    which is detected with the `CI` environment variable.
+    which is detected with the ``CI`` environment variable.
 
     Parameters
     ----------
     venv : str, optional
-        Name of virtualenv to activate. If ``None``, the virtualenv given in
-        the environment variable `VIRTUAL_ENV` will be used. If that
+        Name of virtualenv to activate. If None, the virtualenv given in
+        the environment variable ``VIRTUAL_ENV`` will be used. If that
         environment variable is not set either, no virtualenv will be
         activated.
     """

@@ -193,11 +193,11 @@ Data stores
 Psyrun can use different “data stores” to persist data to the hard drive. It
 provides three stores with different advantages and disadvantages described in
 the following. It is possible to provide additional stores by implementing the
-`AbstractStore` interface.
+`Store` interface.
 
 Note that Psyrun almost always needs to merge multiple data files and thus the
 performance of appending can to an existing data file can be quite relevant.
-The only store that supports efficient append is the `HDF5Store` at the moment.
+The only store that supports efficient append is the `H5Store` at the moment.
 If you have the possibility to use it, it should probably be your first choice.
 The `NpzStore` should be the second choice. The default `PickleStore` is the
 least efficient choice, but provides support for the widest range of data types

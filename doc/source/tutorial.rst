@@ -13,7 +13,7 @@ imported with::
 Parameter space exploration
 ---------------------------
 
-Assume we have a function `objective` that we want to evaluate for different
+Assume we have a function *objective* that we want to evaluate for different
 parameters::
 
     def objective(a, b, c):
@@ -29,7 +29,7 @@ In standard Python this would require to nest a bunch of for-loops like so::
 
 For a complex function with a lot of parameters, this can get a quite deep
 nesting! Psyrun allows you to do this more conveniently by defining a parameter
-space with the `.Param` class::
+space with the `Param` class::
 
     from psyrun import map_pspace, Param
 
@@ -40,7 +40,7 @@ space with the `.Param` class::
 
 The multiplication operator ``*`` is defined as the Cartesian product on
 `Param` instances. Similar code to the example above could also be written
-with the Python `itertools` module. But the `Param` class provides a number
+with the Python *itertools* module. But the `Param` class provides a number
 of other useful operations like concatenation or difference explained in more
 detail in :ref:`pspace`. It is also the basis to the usage of the
 parallelization and serial farming features.
@@ -56,8 +56,8 @@ It is easy to evaluate multiple parameter assignments in parallel with Psyrun::
     results = map_pspace_parallel(objective, pspace)
 
 This parallelization is based on `joblib <https://pythonhosted.org/joblib/>`_
-which by default uses the `multiprocessing` module that spawns multiple Python
-processes. This requires, however, that the `objective` function can be
+which by default uses the *multiprocessing* module that spawns multiple Python
+processes. This requires, however, that the *objective* function can be
 imported from a module, i.e. this does not work if it is only defined in an
 interactive interpreter session. More details are to be found in the
 `Parallelization` section.
@@ -91,8 +91,8 @@ named values.
 We can now run this task by invoking ``psy run example`` on the command line
 (or just ``psy run`` to run all defined tasks and not just *example*). This
 will create a directory *psy-work/example* with a bunch of files supporting
-the task execution and most importantly the file `psy-work/example/result.pkl`,
-a Python `pickle` file with the results::
+the task execution and most importantly the file
+``psy-work/example/result.pkl``, a Python `pickle` file with the results::
 
     import pickle
 
@@ -128,7 +128,7 @@ Serial farming
 If you have access to a high performance computing (HPC) cluster, you can use
 Psyrun for serial farming. That means you run a large number of serial jobs,
 i.e. jobs that have no interdependency and can be run in any order, on the
-cluster. To do so you have to set the `scheduler` and `scheduler_args`
+cluster. To do so you have to set the :attr:`scheduler` and `scheduler_args`
 variables in your task file to the appropriate value (it also a good idea to
 set `max_jobs` and `min_items`). More details can be found in TODO.
 
@@ -138,4 +138,4 @@ HPC cluster uses a different scheduler, you will have to write some code to
 inform Psyrun on how to interface the scheduler.
 
 It can be useful to test a task first by running a single parameter assignment
-with the `psy test` command. (TODO link)
+with the ``psy test`` command. (TODO link)

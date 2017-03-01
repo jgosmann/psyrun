@@ -41,7 +41,7 @@ class ParameterSpace(collections.Sized):
     Supports addition, subtraction, and multiplication operators to construct
     more complicated parameter spaces.
 
-    Deriving classes are supposed to implement the `iterate` and `__len__`
+    Deriving classes are supposed to implement the `iterate` and ``__len__``
     methods.
 
 
