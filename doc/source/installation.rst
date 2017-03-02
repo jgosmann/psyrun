@@ -8,20 +8,30 @@ Requirements
 * `Python <https://www.python.org/>`_ >=2.7, >=3.3
 * `six <https://pypi.python.org/pypi/six>`_
 
-Additionally, to use ``map_pspace_parallel``:
+Optional requirements
+^^^^^^^^^^^^^^^^^^^^^
+
+To have `faulthandler <http://faulthandler.readthedocs.io/>`_ activated for
+jobs submitted with ``psy run`` in Python 2.7:
+
+* `faulthandler <http://faulthandler.readthedocs.io/>`_
+
+Python 3.3+ already includes the faulthandler module.
+
+To use ``map_pspace_parallel``:
 
 * `joblib <https://pythonhosted.org/joblib/>`_
 
-Additionally, to use NPZ files as store:
+To use NPZ files as store:
 
 * `NumPy <http://www.numpy.org/>`_
 
-Additionally, to use HDF5 files as store:
+To use HDF5 files as store:
 
 * `NumPy <http://www.numpy.org/>`_
 * `pytables <http://www.pytables.org/>`_
 
-Additionally, to run the unit tests:
+To run the unit tests:
 
 * `joblib <https://pythonhosted.org/joblib/>`_
 * `NumPy <http://www.numpy.org/>`_
