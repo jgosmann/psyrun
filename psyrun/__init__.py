@@ -6,3 +6,4 @@ from psyrun.mapper import (
 from psyrun.pspace import Param
 from psyrun.scheduler import ImmediateRun, Sqsub
 from psyrun.store import DefaultStore, PickleStore
+from psyrun.version import version as __version__

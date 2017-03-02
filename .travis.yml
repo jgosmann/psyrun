@@ -9,13 +9,12 @@ addons:
 python:
   - "2.7"
   - "3.3"
-  - "3.4"
+  - "3.6"
 
 install:
-  - pip install cython numpy numexpr
-  - pip install -r requirements.txt
+  - pip install numpy
   - pip install coveralls==0.5
-  - pip install -e .
+  - pip install -e .\[tests\]
 
 script: py.test -v --cov psyrun
 

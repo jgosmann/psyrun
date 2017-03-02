@@ -1,8 +1,0 @@
-cython
-joblib
-numpy
-numexpr
-pytest >= 2.8
-pytest-cov
-six
-tables
