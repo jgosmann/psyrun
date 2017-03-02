@@ -15,7 +15,8 @@ assignments in parallel, on a multicore computers and high-performance clusters.
 Documentation
 -------------
 
-Link TODO
+`The documentation can be found here.
+<http://psyrun.readthedocs.io/en/latest/>`_
 
 Overview
 --------
