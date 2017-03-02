@@ -38,7 +38,6 @@ setup(
         'h5': ['numpy', 'tables'],
         'npz': ['numpy'],
         'parallel_map': ['joblib'],
-        'tests': ['pytest >= 2.8', 'pytest-cov', 'joblib', 'numpy', 'tables'],
     },
 
     entry_points={

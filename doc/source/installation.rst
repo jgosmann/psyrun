@@ -5,7 +5,7 @@ Getting started
 Requirements
 ------------
 
-* `Python <https://www.python.org/>`_ >=2.7, >=3.3
+* `Python <https://www.python.org/>`_ >=2.7, >=3.4
 * `six <https://pypi.python.org/pypi/six>`_
 
 Optional requirements
@@ -16,7 +16,7 @@ jobs submitted with ``psy run`` in Python 2.7:
 
 * `faulthandler <http://faulthandler.readthedocs.io/>`_
 
-Python 3.3+ already includes the faulthandler module.
+Python 3.4+ already includes the faulthandler module.
 
 To use ``map_pspace_parallel``:
 
@@ -89,7 +89,7 @@ Running unit tests
 Make sure all test requirements are installed with::
 
     cd psyrun
-    pip install '.[tests]'
+    pip insatll -r requirements-tests.txt
 
 Then the tests can be run with the ``py.test`` command or ``tox`` command to
 test multiple Python versions.
