@@ -20,7 +20,9 @@ Link TODO
 Overview
 --------
 
-Define parameter spaces and evaluate them::
+Define parameter spaces and evaluate them:
+
+.. code-block:: python
 
     from psyrun import map_pspace, Param
 
@@ -32,12 +34,16 @@ Define parameter spaces and evaluate them::
               * Param(c=[1., 1.5, 10., 10.5]))
     results = map_pspace(objective, pspace) 
 
-Or do it in parallel::
+Or do it in parallel:
+
+.. code-block:: python
 
     from psyrun import map_pspace_parallel
     results = map_pspace_parallel(objective, pspace)
 
-Define tasks by placing ``task_<name>.py`` files in the `psy-tasks`` directory::
+Define tasks by placing ``task_<name>.py`` files in the `psy-tasks`` directory:
+
+.. code-block:: python
 
     from psyrun import Param
 
