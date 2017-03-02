@@ -184,11 +184,69 @@ the task file to submit jobs, but will directly run them.
 Writing task-files
 ------------------
 
+Each task is defined in a Python file with the name ``task_<name>.py``. That
+means any valid Python code can be used in the definition of the task. There
+are certain module level variables that have a special meaning. The two most
+important are ``pspace``, defining the parameter space to explore, and
+``execute`` defining the function to evaluate a single parameter assignment.
 
+Also consider setting ``store`` to either `H5Store` or `NpzStore`. This
+requires additional dependencies to be installed and imposes some limitations
+on the data, but can improve performance. See TODO for more details.
+
+It is likely that you also want to adjust ``max_jobs`` (maximum number of
+processing jobs to submit to process the task) and ``min_items`` (minimum
+number of items to process with each processing jobs). If each parameter
+assignment is evaluated quickly, it can be beneficial to increase ``min_items``
+to avoid the overhead of starting a lot of jobs. By default ``max_jobs`` is set
+to 100 as on high performance clusters there might be a penalty or limit on the
+number of jobs one can submit at a time.
+
+If you want to run a task on a high performance cluster, it will be necessary
+to set ``scheduler`` to the appropriate scheduler. Otherwise, jobs will be run
+serially and immediately. There is also a ``schedular_args`` variable which
+allows to define a dictionary of additional required arguments for the
+scheduler. These will depend on the scheduler used, see TODO for more details.
+High performance clusters might offer different file systems with different
+access speed. In that case you might want to set ``workdir``, the directory
+where intermediary files are written to, and ``resultfile``, the file results
+are written to, to appropriate locations.
+
+By default Psyrun will split the parameters space in equally sized batches. If
+parameter assignment can vary in their execution time, it might be beneficial
+to use a load balancing approach best by setting ``backend`` to
+`LoadBalancingBackend`. See TODO for more details.
+
+All special variables are documented as part of the `psyrun.tasks.Config`
+documentation.
+
+This is what a task file to run on the `Sharcnet <https://www.sharcnet.ca>`_
+might look like::
+
+    import numpy as np
+    from psyrun import Param, Sqsub
+    from psyrun.store.npz import NpzStore
+
+
+    pspace = Param(radius=np.linspace(0., 1., 100)) * Param(trial=np.arange(50))
+    min_items = 10
+    store = NpzStore()
+    workdir = '/work/user/mc_circle_area'
+    scheduler = Sqsub(workdir)
+    scheduler_args = {
+        'timelimit': '15m',
+        'memory': '1G',
+    }
+
+
+    def execute(radius, trial):
+        n = 100
+        x = np.random.random((n, 2)) * 2. - 1.
+        return {'a_frac': np.mean(np.linalg.norm(x, axis=1) < radius), 'x': x}
 
 
 Data stores
----------------------
+-----------
 
 Psyrun can use different “data stores” to persist data to the hard drive. It
 provides three stores with different advantages and disadvantages described in
