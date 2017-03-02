@@ -194,27 +194,27 @@ Also consider setting ``store`` to either `H5Store` or `NpzStore`. This
 requires additional dependencies to be installed and imposes some limitations
 on the data, but can improve performance. See TODO for more details.
 
-It is likely that you also want to adjust ``max_jobs`` (maximum number of
-processing jobs to submit to process the task) and ``min_items`` (minimum
+It is likely that you also want to adjust *max_jobs* (maximum number of
+processing jobs to submit to process the task) and *min_items* (minimum
 number of items to process with each processing jobs). If each parameter
-assignment is evaluated quickly, it can be beneficial to increase ``min_items``
-to avoid the overhead of starting a lot of jobs. By default ``max_jobs`` is set
+assignment is evaluated quickly, it can be beneficial to increase *min_items*
+to avoid the overhead of starting a lot of jobs. By default *max_jobs* is set
 to 100 as on high performance clusters there might be a penalty or limit on the
 number of jobs one can submit at a time.
 
 If you want to run a task on a high performance cluster, it will be necessary
-to set ``scheduler`` to the appropriate scheduler. Otherwise, jobs will be run
-serially and immediately. There is also a ``schedular_args`` variable which
+to set *scheduler* to the appropriate scheduler. Otherwise, jobs will be run
+serially and immediately. There is also a *schedular_args* variable which
 allows to define a dictionary of additional required arguments for the
 scheduler. These will depend on the scheduler used, see TODO for more details.
 High performance clusters might offer different file systems with different
-access speed. In that case you might want to set ``workdir``, the directory
-where intermediary files are written to, and ``resultfile``, the file results
+access speed. In that case you might want to set *workdir*, the directory
+where intermediary files are written to, and *resultfile*, the file results
 are written to, to appropriate locations.
 
 By default Psyrun will split the parameters space in equally sized batches. If
 parameter assignment can vary in their execution time, it might be beneficial
-to use a load balancing approach best by setting ``backend`` to
+to use a load balancing approach best by setting *backend* to
 `LoadBalancingBackend`. See TODO for more details.
 
 All special variables are documented as part of the `psyrun.tasks.Config`
@@ -286,14 +286,63 @@ data types.
 Backends
 --------
 
-Distribute
-^^^^^^^^^^
+Backends determine how work is distributed to a number of jobs. By default
+Psyrun will use the `DistributeBackend` that will use one job to split the
+parameter space in equally sized batches and process them with up to
+*max_jobs* processing jobs (each batch will have at least *min_items* items
+to process). After all processing jobs are finished all the results will be
+merged into a single file by another job. This is similar to `map-reduce
+processing <https://de.wikipedia.org/wiki/MapReduce>`_.
 
-LoadBalancing
-^^^^^^^^^^^^^
+If evaluating different parameter sets can take a different amount of time,
+this might lead to some jobs finishing very early, while others take a long
+time. Thus the computational resources are not used optimally. In that case in
+can be beneficial to use load balancing with the `LoadBalancingBackend`. This
+backend will start *max_jobs* and each will fetch single items to process until
+all items have been processed. Thus, if a job is finished early with one item,
+it just fetches the next and continues. This gives a better use of the
+computational resources, but also has some disadvantages: It requires to load
+specific single rows from an input file which is only supported efficiently by
+the `H5Store`. Also the order in which the results are written becomes
+non-deterministic which makes it computationally more expensive to determine
+what parameter assignments have to be rerun if some of them failed to execute.
+
+
+Schedulers
+----------
+
+Schedulers define how Psyrun submits individual jobs. The default is
+`ImmediateRun` which is not really a scheduler because it just immediately runs
+any job on submission. Psyrun comes with support for Sharcnet's ``sqsub`` wtih
+the `Sqsub` scheduler (TODO section ref). For other schedulers it is necessary
+to write some code as explained in TODO.
 
 Sqsub scheduler (Sharcnet)
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `Sqsub` scheduler uses ``sqsub`` to submit jobs. It accepts the following
+*scheduler_args* (corresponding ``sqsub`` command line options are given in
+parenthesis):
+
+* *timelimit* (required, ``-r``): String stating the execution time limit for
+  each individual job.
+* *n_cpus* (optional, default 1, ``-n``): Number of CPU cores to allocate for
+  each individual job.
+* *n_nodes* (optional, ``-N``): Number of nodes to allocate for each individual
+  job.
+* *memory* (required, ``--mpp``): String stating the memory limit for each
+  individual job.
+
+For more details see the ``sqsub`` help.
+
 
 Interfacing other schedulers
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To support other schedulers, it is necessary to implement the `Scheduler`
+interface. The central function is `Scheduler.submit` that will be invoked to
+submit a job. Furthermore, functions to obtain the status
+(`Scheduler.get_status`), return running and queued jobs
+(`Scheduler.get_jobs`), and kill jobs `Scheduler.kill` are required. It can be
+instructive to read the `Sqsub` (TODO source link) source code before
+implementing a scheduler.
