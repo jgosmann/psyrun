@@ -64,12 +64,12 @@ Installation
 
 ``pip install psyrun``
 
-To use the NPZ store::
+To be able to use the NPZ store::
 
     pip install numpy
     pip install 'psyrun[npz]'
 
-To use the HDF5 store::
+To be able to use the HDF5 store::
 
     pip install numpy
     pip install 'psyrun[h5]'
