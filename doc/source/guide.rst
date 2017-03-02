@@ -52,7 +52,7 @@ operator removes everything with matching parameters.
 This however would raise an exception if there are additional parameters in the
 subtrahend.
 
->>> pspace = Param(a=[1, 2, 3]) - Param(a=[2], c=[4])
+>>> pspace = Param(a=[1, 2, 3]) - Param(a=[2], c=[4])  # doctest: +IGNORE_EXCEPTION_DETAIL
 Traceback (most recent call last):
     ...
 psyrun.pspace.AmbiguousOperationError: Key `c` not existent in minuend.
