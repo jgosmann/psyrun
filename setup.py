@@ -15,6 +15,11 @@ version_mod = imp.load_source(
     'version',
     os.path.join(os.path.dirname(__file__), 'psyrun', 'version.py'))
 
+with open('README.rst') as f:
+    long_description = f.read()
+with open('CHANGES.rst') as f:
+    long_description += '\n\n' + f.read()
+
 setup(
     name="psyrun",
     version=version_mod.version,
@@ -23,7 +28,7 @@ setup(
     url='https://github.com/jgosmann/psyrun',
     license="MIT",
     description="Easy parameter space evaluation and serial farming.",
-    long_description="",
+    long_description=long_description,
 
     packages=find_packages(),
     provides=['psyrun'],
