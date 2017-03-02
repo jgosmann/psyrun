@@ -1,6 +1,9 @@
+"""Defines the ``psy`` command line interface commands."""
+
 import argparse
 import os.path
 import shutil
+import sys
 import warnings
 
 from psyrun.backend.distribute import Splitter
@@ -13,14 +16,13 @@ from psyrun.utils.venv import init_virtualenv
 commands = {}
 
 
-# TODO document commands
 def psy_main(argv=None, init_venv=True):
     """Runs psyrun tasks.
 
     Parameters
     ----------
     argv : sequence of str, optional
-        psyrun command line arguments.
+        ``psy`` command line arguments.
     init_venv : bool, optional
         Use the virtualenv active in the shell environment if set to True.
 
@@ -32,43 +34,85 @@ def psy_main(argv=None, init_venv=True):
     if init_venv:
         init_virtualenv()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('cmd', nargs=1, type=str, help="Command to run.")
-    parser.add_argument('args', nargs=argparse.REMAINDER)
+    parser = argparse.ArgumentParser(
+        epilog="available commands:\n{}\n".format(''.join(
+            "  {: <11s} {}\n".format(k, v.short_desc)
+            for k, v in sorted(commands.items()))),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('cmd', nargs=1, type=str, help="command to run")
+    parser.add_argument('args', nargs=argparse.REMAINDER,
+                        help="arguments to command")
     args = parser.parse_args(argv)
 
-    return commands[args.cmd[0]](args.args).run()
+    return commands[args.cmd[0]](args.cmd[0], args.args).run()
 
 
 class Command(object):
-    def __init__(self, argv):
-        self.parser = argparse.ArgumentParser()
+    """Base class for commands.
+
+    Deriving classes are supposed to implement `run` and may overwrite
+    `add_args` to add additional arguments to ``self.parser``.
+
+    Parameters
+    ----------
+    cmd : str
+        Command name.
+    argv : sequence
+        Arguments to the command.
+
+    Attributes
+    ----------
+    parser : argparse.ArgumentParser
+        Parser for arguments.
+    args : argparse.Namespace
+        Parsed arguments.
+    """
+    short_desc = ""
+    long_desc = ""
+
+    def __init__(self, cmd, argv):
+        prog = os.path.basename(sys.argv[0]) + ' ' + cmd
+        self.parser = argparse.ArgumentParser(
+            prog=prog, description=self.long_desc)
         self.add_args()
         self.args = self.parser.parse_args(argv)
 
     def add_args(self):
+        """Add command arguments to ``self.parser``."""
         pass
 
     def run(self):
+        """Run the command."""
         raise NotImplementedError()
 
 
 class TaskdirCmd(Command):
-    def __init__(self, argv):
-        super(TaskdirCmd, self).__init__(argv)
+    """Base class for commands that accept a ``--taskdir`` argument."""
+
+    def __init__(self, cmd, argv):
+        super(TaskdirCmd, self).__init__(cmd, argv)
         self.package_loader = PackageLoader(self.args.taskdir[0])
 
     def add_args(self):
         super(TaskdirCmd, self).add_args()
         self.parser.add_argument(
             '--taskdir', nargs=1, type=str, default=['psy-tasks'],
-            help="Directory to load tasks from.")
+            help="directory to load tasks from")
 
     def run(self):
         raise NotImplementedError()
 
 
 class TaskselCmd(TaskdirCmd):
+    """Base class for commands that accept a selection of tasks as arguments.
+
+    Attributes
+    ----------
+    default_to_all : bool
+        Indicates whether the command defaults to all (or no) tasks when no
+        task names are specified as arguments.
+    """
+
     default_to_all = True
 
     def add_args(self):
@@ -86,12 +130,17 @@ class TaskselCmd(TaskdirCmd):
 
 
 class RunCmd(TaskselCmd):
+    short_desc = "run one or more tasks"
+    long_desc = (
+        "Submits the jobs to run one or more tasks. If no task name is "
+        "provided, all tasks will be run.")
+
     def add_args(self):
         super(RunCmd, self).add_args()
         self.parser.add_argument(
             '-c', '--continue', action='store_true',
-            help="Preserve existing data in the workdir and do not rerun"
-            "parameter assignment already existent in there.")
+            help="preserve existing data in the workdir and do not rerun "
+            "parameter assignment already existent in there")
 
     def run_task(self, task):
         cont = vars(self.args)['continue']
@@ -112,6 +161,9 @@ class RunCmd(TaskselCmd):
 
 
 class CleanCmd(TaskselCmd):
+    short_desc = "clean task data"
+    long_desc = (
+        "Removes all processing and result files associated with a task.")
     default_to_all = False
 
     def run_task(self, task):
@@ -121,28 +173,40 @@ class CleanCmd(TaskselCmd):
 
 
 class ListCmd(TaskdirCmd):
+    short_desc = "list tasks"
+    long_desc = "Lists all available tasks."
+
     def run(self):
         for t in self.package_loader.load_task_defs():
             print(t.name)
 
 
 class MergeCmd(Command):
+    short_desc = "merge data files into single file"
+    long_desc = "Merges all data files in a directory into a single data file."
+
     def add_args(self):
         self.parser.add_argument(
-            'directory', type=str, help="Directory with files to merge.")
+            'directory', type=str, help="directory with files to merge")
         self.parser.add_argument(
-            'merged', type=str, help="File to write the merged result to.")
+            'merged', type=str, help="file to write the merged result to")
 
     def run(self):
         Splitter.merge(self.args.directory, self.args.merged)
 
 
 class StatusCmd(TaskselCmd):
+    short_desc = "print status of tasks"
+    long_desc = (
+        "Prints the status (number of completed parameter assignments of the "
+        "total). Can also print parameter assignments that have not been "
+        "evaluated yet.")
+
     def add_args(self):
         super(StatusCmd, self).add_args()
         self.parser.add_argument(
             '-v', '--verbose', action='store_true',
-            help="Print missing parameter sets.")
+            help="print missing parameter sets")
 
     def run_task(self, task):
         missing = task.backend(task).get_missing()
@@ -157,6 +221,12 @@ class StatusCmd(TaskselCmd):
 
 
 class TestCmd(TaskselCmd):
+    short_desc = "test execution of single parameter assignment"
+    long_decs = (
+        "Tests the task execution by running a single parameter assignment. "
+        "The job will not be submitted with to the scheduler, but run "
+        "immediatly.")
+
     def run_task(self, task):
         print(task.name)
         task.execute(**next(task.pspace.iterate()))
@@ -170,3 +240,7 @@ commands.update({
     'status': StatusCmd,
     'test': TestCmd,
 })
+
+
+if __name__ == '__main__':
+    sys.exit(psy_main())

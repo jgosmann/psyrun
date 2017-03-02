@@ -11,7 +11,7 @@ from psyrun.store.h5 import H5Store
 from psyrun.store.npz import NpzStore
 from psyrun.store.pickle import PickleStore
 from psyrun.tasks import TaskDef, Config
-from psyrun.utils.mockscheduler import MockScheduler
+from psyrun.utils.testing import MockScheduler
 
 
 TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')

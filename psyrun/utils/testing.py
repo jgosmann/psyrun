@@ -1,16 +1,29 @@
+"""Testing utilities."""
+
 import os.path
 import pickle
 import subprocess
 
 from psyrun.scheduler import JobStatus, Scheduler
+from psyrun.utils.doc import inherit_docs
 
 
+@inherit_docs
 class MockScheduler(Scheduler):
+    """Mock scheduler implementation.
+
+    Parameters
+    ----------
+    datafile : str
+        File to store supporting data.
+    """
+
     def __init__(self, datafile):
         self.datafile = datafile
 
     @property
     def next_id(self):
+        """ID for next submitted job."""
         if os.path.exists(self.datafile):
             with open(self.datafile, 'rb') as f:
                 return pickle.load(f)['next_id']
@@ -23,6 +36,7 @@ class MockScheduler(Scheduler):
 
     @property
     def joblist(self):
+        """Tuple of current jobs."""
         if os.path.exists(self.datafile):
             with open(self.datafile, 'rb') as f:
                 return tuple(pickle.load(f)['joblist'])
@@ -63,6 +77,7 @@ class MockScheduler(Scheduler):
         return jobid
 
     def mark_running(self):
+        """Mark all jobs as running."""
         updated = []
         for job in self.joblist:
             job.update({'status': 'R'})
@@ -79,6 +94,7 @@ class MockScheduler(Scheduler):
         return None
 
     def consume(self):
+        """Process all queued jobs."""
         for job in self.joblist:
             with open(job['output_filename'], 'a') as f:
                 subprocess.check_call(
@@ -86,6 +102,7 @@ class MockScheduler(Scheduler):
         self.joblist = []
 
     def consume_job(self, job):
+        """Process a  single job."""
         with open(job['output_filename'], 'a') as f:
             subprocess.check_call(
                 job['args'], stdout=f, stderr=subprocess.STDOUT)

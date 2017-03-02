@@ -1,4 +1,8 @@
+"""Documentation utilities."""
+
+
 def inherit_docs(cls):
+    """Class decorator that makes it inherit function doc strings."""
     for name in dir(cls):
         member = getattr(cls, name)
         if member.__doc__ is not None:

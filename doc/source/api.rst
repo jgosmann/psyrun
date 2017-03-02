@@ -114,10 +114,10 @@ utils.example module
 
 .. automodule:: psyrun.utils.example
 
-utils.mockscheduler module
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+utils.testing module
+^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: psyrun.utils.mockscheduler
+.. automodule:: psyrun.utils.testing
 
 utils.venv module
 ^^^^^^^^^^^^^^^^^
