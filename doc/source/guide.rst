@@ -3,20 +3,21 @@
 User Guide
 ==========
 
+.. _guide-pspace:
 
 Constructing parameter spaces
 -----------------------------
 
-Parameter spaces are constructed with the :class:`.Param` class. You pass in
+Parameter spaces are constructed with the `Param` class. You pass in
 sequences of parameter values as keyword arguments. As long as you pass in at
-least one sequence other parameter values are allowed to be scalars and will be
+least one sequence, other parameter values are allowed to be scalars and will be
 replicated to match the sequence length.
 
 >>> from psyrun import Param
 >>> pspace = Param(a=[1, 2, 3], b=[4, 5, 6], c=7)
 
-The :class:`.Param` object only stores the information to construct all
-parameter assignments. Call the :func:`.Param.build` method to construct
+The `Param` object only stores the information to construct all
+parameter assignments. Call the :meth:`~.ParameterSpace.build` method to construct
 a dictionary with these parameter assignments. The dictionary will have the
 parameter names as keys and lists of the assigned values in corresponding order
 as values.
@@ -26,8 +27,8 @@ as values.
 {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 7, 7]}
 
 So far it would have been easier to just enter the resulting dictionary in the
-first place. But the :class:`.Param` class allows to easily construct more
-complicated parameter spaces. If you multiply two :class:`.Param` instances
+first place. But the `Param` class allows to easily construct more
+complicated parameter spaces. If you multiply two `Param` instances,
 this will result in the Cartesian product of the parameter values.
 
 >>> pspace = Param(a=[1, 2, 3], b=[4, 5, 6]) * Param(c=[7, 8])
@@ -67,8 +68,8 @@ assignments missing in the second parameter space.
 
 With these basic operations it is possible to construct complicated
 parameter spaces. For very large spaces you might not want to convert the whole
-space into a dictionary at once. For this case exists the
-:func:`.Param.iterate` method to iterate over the parameter assignments without
+space into a dictionary at once. For this case the
+:func:`.Param.iterate` method exists to iterate over the parameter assignments without
 allocating more memory than necessary.
 
 >>> pspace = Param(a=[1, 2]) * Param(b=[3, 4])
@@ -79,6 +80,8 @@ allocating more memory than necessary.
 {'a': 2, 'b': 3}
 {'a': 2, 'b': 4}
 
+
+.. _guide-mapping:
 
 Evaluating functions on parameter spaces
 ----------------------------------------
@@ -171,6 +174,9 @@ Prints the status of all tasks or the tasks given as arguments. Use the ``-v``
 flag for a more verbose output including parameter assignments that have not
 been evaluated yet.
 
+
+.. _cmd-test:
+
 test
 ^^^^
 
@@ -180,6 +186,8 @@ Runs a single parameter assignment for each task or each task given as argument
 to test that it successfully executes. It does not use the scheduler defined in
 the task file to submit jobs, but will directly run them.
 
+
+.. _guide-task-files:
 
 Writing task-files
 ------------------
@@ -244,6 +252,8 @@ might look like::
         x = np.random.random((n, 2)) * 2. - 1.
         return {'a_frac': np.mean(np.linalg.norm(x, axis=1) < radius), 'x': x}
 
+
+.. _guide-stores:
 
 Data stores
 -----------

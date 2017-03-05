@@ -110,3 +110,8 @@ To run the unit tests:
 * `NumPy <http://www.numpy.org/>`_
 * `pytables <http://www.pytables.org/>`_
 * `pytest <http://doc.pytest.org/en/latest/>`_ >= 2.8
+
+
+To build the documentation:
+
+* `numpydoc <https://pypi.python.org/pypi/numpydoc>`_

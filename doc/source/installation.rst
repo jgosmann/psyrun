@@ -38,6 +38,10 @@ To run the unit tests:
 * `pytables <http://www.pytables.org/>`_
 * `pytest <http://doc.pytest.org/en/latest/>`_ >= 2.8
 
+To build the documentation:
+
+* `numpydoc <https://pypi.python.org/pypi/numpydoc>`_
+
 
 Installation
 ------------
@@ -45,7 +49,7 @@ Installation
 The easiest way to install Psyrun is with `pip
 <https://pip.pypa.io/en/stable/>`_::
 
-``pip install psyrun``
+    pip install psyrun
 
 All required dependencies should be installed automatically. If you want to use
 features that require the optional NumPy dependency, it is best to install
@@ -89,9 +93,9 @@ Running unit tests
 Make sure all test requirements are installed with::
 
     cd psyrun
-    pip insatll -r requirements-tests.txt
+    pip install -r requirements-tests.txt
 
-Then the tests can be run with the ``py.test`` command or ``tox`` command to
+Then the tests can be run with the ``py.test`` command or the ``tox`` command to
 test multiple Python versions.
 
 
