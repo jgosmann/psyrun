@@ -7,7 +7,7 @@ Psyrun
 .. image:: https://coveralls.io/repos/github/jgosmann/psyrun/badge.svg?branch=master
     :target: https://coveralls.io/github/jgosmann/psyrun?branch=master
 
-Psyrun is a `Python <https://www.python.org>`_ tool to define parameter spaces
+Psyrun is a Python_ tool to define parameter spaces
 and execute an evaluation function for each parameter assignment. In addition
 Psyrun makes it easy to use serial farming, i.e. evaluating multiple parameter
 assignments in parallel, on a multicore computers and high-performance clusters.
@@ -78,7 +78,7 @@ To be able to use the HDF5 store::
 Requirements
 ------------
 
-* `Python <https://www.python.org/>`_ >=2.7, >=3.4
+* Python_ >=2.7, >=3.4
 * `six <https://pypi.python.org/pypi/six>`_
 
 Optional requirements
@@ -115,3 +115,6 @@ To run the unit tests:
 To build the documentation:
 
 * `numpydoc <https://pypi.python.org/pypi/numpydoc>`_
+
+
+.. _Python: https://www.python.org/
