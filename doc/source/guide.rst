@@ -87,8 +87,8 @@ Evaluating functions on parameter spaces
 ----------------------------------------
 
 Once the parameter space is constructed, one probably wants to evaluate
-a function on it. For this the function needs to accept a set of parameters as
-keyword arguments and it has to return it results as a dictionary. Here is
+a function on it. For this, the function needs to accept a set of parameters as
+keyword arguments and it has to return its results as a dictionary. Here is
 a simple example function:
 
 >>> def basic_math(a, b):
@@ -107,7 +107,7 @@ parameter space.
  'sum': [4, 5, 5, 6]}
 
 This will evaluate each set of parameters serially. If the evaluated function
-itself is not parallelized it is probably more efficient to do the evaluation
+itself is not parallelized, it is probably more efficient to do the evaluation
 for different sets of parameter values in parallel. If you have
 `joblib <https://pythonhosted.org/joblib/>`_ installed and your function can be
 pickled (e.g., it can be imported from a Python module), you can use
@@ -125,7 +125,7 @@ Psyrun command line interface
 All Psyrun commands are invoked with ``psy <subcommand>``. The available
 subcommands are described in the following. The ``psy`` command looks for task
 definitions in the *psy-tasks* directory relative to its working directory, but
-a different location can be provided to many subcommands with the ``--taskdir``
+a different location can be provided with the ``--taskdir``
 argument. To get help about the ``psy`` command or any subcommand use ``psy
 --help`` and ``psy <subcommand> --help``.
 
@@ -200,7 +200,8 @@ important are ``pspace``, defining the parameter space to explore, and
 
 Also consider setting ``store`` to either `H5Store` or `NpzStore`. This
 requires additional dependencies to be installed and imposes some limitations
-on the data, but can improve performance. See TODO for more details.
+on the data, but can improve performance. See :ref:`guide-stores` for more
+details.
 
 It is likely that you also want to adjust *max_jobs* (maximum number of
 processing jobs to submit to process the task) and *min_items* (minimum
@@ -214,7 +215,8 @@ If you want to run a task on a high performance cluster, it will be necessary
 to set *scheduler* to the appropriate scheduler. Otherwise, jobs will be run
 serially and immediately. There is also a *schedular_args* variable which
 allows to define a dictionary of additional required arguments for the
-scheduler. These will depend on the scheduler used, see TODO for more details.
+scheduler. These will depend on the scheduler used, see :ref:`guide-schedulers`
+for more details.
 High performance clusters might offer different file systems with different
 access speed. In that case you might want to set *workdir*, the directory
 where intermediary files are written to, and *resultfile*, the file results
@@ -222,8 +224,8 @@ are written to, to appropriate locations.
 
 By default Psyrun will split the parameters space in equally sized batches. If
 parameter assignment can vary in their execution time, it might be beneficial
-to use a load balancing approach best by setting *backend* to
-`LoadBalancingBackend`. See TODO for more details.
+to use a load balancing approach by setting *backend* to
+`LoadBalancingBackend`. See :ref:`guide-backends` for more details.
 
 All special variables are documented as part of the `psyrun.tasks.Config`
 documentation.
@@ -264,8 +266,8 @@ the following. It is possible to provide additional stores by implementing the
 `Store` interface.
 
 Note that Psyrun almost always needs to merge multiple data files and thus the
-performance of appending can to an existing data file can be quite relevant.
-The only store that supports efficient append is the `H5Store` at the moment.
+performance of appending to an existing data file can be quite relevant.
+The only store that supports efficient appending is the `H5Store` at the moment.
 If you have the possibility to use it, it should probably be your first choice.
 The `NpzStore` should be the second choice. The default `PickleStore` is the
 least efficient choice, but provides support for the widest range of data types
@@ -282,7 +284,7 @@ NumPy NPZ
 ^^^^^^^^^
 
 The `NpzStore` requires `NumPy <http://www.numpy.org/>`_ and is more efficient
-than the `PickleStore`. It will, however, also require to read and rewrite the
+than the `PickleStore`. It will, however, still require to read and rewrite the
 complete data file for appending data.
 
 HDF5
@@ -292,6 +294,8 @@ The `H5Store` requires `PyTables <http://www.pytables.org/>`_ and provides
 efficient appends to existing data files. However, it only supports numeric
 data types.
 
+
+.. _guide-backends:
 
 Backends
 --------
@@ -318,14 +322,16 @@ non-deterministic which makes it computationally more expensive to determine
 what parameter assignments have to be rerun if some of them failed to execute.
 
 
+.. _guide-schedulers:
+
 Schedulers
 ----------
 
 Schedulers define how Psyrun submits individual jobs. The default is
 `ImmediateRun` which is not really a scheduler because it just immediately runs
-any job on submission. Psyrun comes with support for Sharcnet's ``sqsub`` wtih
-the `Sqsub` scheduler (TODO section ref). For other schedulers it is necessary
-to write some code as explained in TODO.
+any job on submission. Psyrun comes with support for Sharcnet's ``sqsub`` with
+the `Sqsub` scheduler. For other schedulers it is necessary
+to write some custom code.
 
 Sqsub scheduler (Sharcnet)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -354,5 +360,5 @@ interface. The central function is `Scheduler.submit` that will be invoked to
 submit a job. Furthermore, functions to obtain the status
 (`Scheduler.get_status`), return running and queued jobs
 (`Scheduler.get_jobs`), and kill jobs `Scheduler.kill` are required. It can be
-instructive to read the `Sqsub` (TODO source link) source code before
+instructive to read the `Sqsub` source code before
 implementing a scheduler.
