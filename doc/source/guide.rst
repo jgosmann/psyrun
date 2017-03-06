@@ -363,3 +363,24 @@ submit a job. Furthermore, functions to obtain the status
 (`Scheduler.get_jobs`), and kill jobs `Scheduler.kill` are required. It can be
 instructive to read the `Sqsub` source code before
 implementing a scheduler.
+
+
+Recipes
+-------
+
+This section collects code examples for common tasks.
+
+
+Convert results to a Pandas data frame
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Note that this recipe requires all single parameter values and outputs to be
+scalars as Pandas does not support multi-dimensional data.
+
+.. code-block:: python
+
+    import pandas as pd
+    import psyrun
+
+    store = psyrun.store.PickleStore()  # insert appropriate store here
+    df = pd.DataFrame(store.load('path/to/datafile.pkl'))
