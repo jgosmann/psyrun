@@ -192,7 +192,14 @@ class MergeCmd(Command):
             'merged', type=str, help="file to write the merged result to")
 
     def run(self):
-        Splitter.merge(self.args.directory, self.args.merged)
+        ext = os.path.splitext(self.args.merged)[1].lower()
+        if ext == '.npz':
+            from psyrun.store.npz import NpzStore as Store
+        elif ext == '.h5':
+            from psyrun.store.h5 import H5Store as Store
+        else:
+            from psyrun.store.pickle import PickleStore as Store
+        Splitter.merge(self.args.directory, self.args.merged, store=Store())
 
 
 class StatusCmd(TaskselCmd):

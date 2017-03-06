@@ -163,7 +163,8 @@ merge
 
 ``psy merge [-h] directory merged``
 
-Merges all output files in *directory* into a single file *merged*.
+Merges all output files in *directory* into a single file *merged*. The filename
+extension of *merged* is used to determine the input and output format.
 
 status
 ^^^^^^
