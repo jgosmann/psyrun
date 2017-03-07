@@ -35,7 +35,12 @@ class TaskDef(object):
 
     def __init__(self, path, conf=None):
         if conf is None:
-            conf = Config()
+            taskdir = os.path.dirname(path)
+            conffile = os.path.join(taskdir, 'psy-conf.py')
+            if os.path.exists(conffile):
+                conf = Config.load_from_file(conffile)
+            else:
+                conf = Config()
 
         _set_public_attrs_from_dict(
             self, _load_pyfile(path), only_existing=False)
