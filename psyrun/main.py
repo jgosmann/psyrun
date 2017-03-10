@@ -120,10 +120,14 @@ class TaskselCmd(TaskdirCmd):
         self.parser.add_argument('task', nargs='*', type=str)
 
     def run(self):
+        tasks = {t.name: t for t in self.package_loader.load_task_defs()}
         run_all = self.default_to_all and len(self.args.task) == 0
-        for t in self.package_loader.load_task_defs():
-            if run_all or t.name in self.args.task:
-                return self.run_task(t)
+        if run_all:
+            selected = tasks.keys()
+        else:
+            selected = self.args.task
+        for name in selected:
+            self.run_task(tasks[name])
 
     def run_task(self, task):
         raise NotImplementedError()
