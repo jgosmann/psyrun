@@ -1,6 +1,13 @@
 Changes
 =======
 
+0.5.2
+-----
+
+* Fix incorrect ``psy status``.
+* Fix ``psy run <task1> <task2> ...`` not running all tasks and run them in
+  order.
+
 0.5.1
 -----
 
