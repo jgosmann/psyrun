@@ -120,14 +120,18 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
                 pspace, Param(**self.task.store.load(self.resultfile)))
         except IOError:
             missing_items = pspace
-            for filename in os.path.join(self.workdir, 'out'):
-                outfile = os.path.join(self.workdir, 'out', filename)
-                try:
-                    missing_items = missing(
-                        missing_items,
-                        Param(**self.task.store.load(outfile)))
-                except IOError:
-                    pass
+            try:
+                for filename in os.listdir(os.path.join(self.workdir, 'out')):
+                    outfile = os.path.join(self.workdir, 'out', filename)
+                    try:
+                        x = Param(**self.task.store.load(outfile))
+                        missing_items = missing(
+                            missing_items,
+                            Param(**self.task.store.load(outfile)))
+                    except IOError:
+                        pass
+            except IOError:
+                pass
         return missing_items
 
 
