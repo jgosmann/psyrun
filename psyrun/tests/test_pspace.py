@@ -155,6 +155,11 @@ class TestDifference(object):
         space = (Param(a=[1, 2, 3]) - Param(a=[2])).build()
         assert sorted(space['a']) == [1, 3]
 
+    def test_multiple_builds(self):
+        space = (Param(a=[1, 2, 3]) - Param(a=[2]))
+        assert sorted(space.build()['a']) == [1, 3]
+        assert sorted(space.build()['a']) == [1, 3]
+
     def test_param_missing_in_subtrahend(self):
         space = (Param(a=[1, 2, 2], b=[4, 5, 6]) - Param(a=[2])).build()
         assert sorted(space['a']) == [1]

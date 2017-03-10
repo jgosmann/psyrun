@@ -212,10 +212,10 @@ class Difference(ParameterSpace):
             return self.left.iterate()
         if self._cached is None:
             exclude = self.right.build()
-            self._cached = (item for item in self.left.iterate()
+            self._cached = [item for item in self.left.iterate()
                             if not all(item[k] in exclude[k]
-                                       for k in exclude.keys()))
-        return self._cached
+                                       for k in exclude.keys())]
+        return iter(self._cached)
 
     def __len__(self):
         return sum(1 for item in self.iterate())
