@@ -122,9 +122,10 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
             missing_items = pspace
             try:
                 for filename in os.listdir(os.path.join(self.workdir, 'out')):
+                    if os.path.splitext(filename)[1] != self.task.store.ext:
+                        continue
                     outfile = os.path.join(self.workdir, 'out', filename)
                     try:
-                        x = Param(**self.task.store.load(outfile))
                         missing_items = missing(
                             missing_items,
                             Param(**self.task.store.load(outfile)))
