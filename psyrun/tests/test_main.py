@@ -343,11 +343,6 @@ def test_multiple_splits(taskenv):
     assert sorted(result['y']) == [0, 1, 4, 9]
 
 
-def test_working_directory(taskenv):
-    psy_main(['run', '--taskdir', taskenv.taskdir, 'workingdir'])
-    # Assert is within the task file.
-
-
 def test_psy_run_runs_all_tasks(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square', 'square2'])
     result = PickleStore().load(
