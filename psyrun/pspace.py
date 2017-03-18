@@ -205,16 +205,15 @@ class Difference(ParameterSpace):
                     'Key `{0}` not existent in minuend.'.format(k))
         self.left = minuend
         self.right = subtrahend
-        self._cached = None
-
-    def iterate(self):
         if len(self.right) == 0:
-            return self.left.iterate()
-        if self._cached is None:
+            self._cached = list(self.left.iterate())
+        else:
             exclude = self.right.build()
             self._cached = [item for item in self.left.iterate()
                             if not all(item[k] in exclude[k]
                                        for k in exclude.keys())]
+
+    def iterate(self):
         return iter(self._cached)
 
     def __len__(self):
