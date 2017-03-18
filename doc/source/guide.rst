@@ -188,6 +188,18 @@ to test that it successfully executes. It does not use the scheduler defined in
 the task file to submit jobs, but will directly run them.
 
 
+Diagnosing problems
+-------------------
+
+When some of the ``psy run`` jobs fail it is important to find out what caused
+them to fail. Each job creates a log file that might contain useful information
+(for example the exception that halted the job). These logfiles will be written
+to the task directory in the workdir which by default is ``psy-work/<task
+name>``. The logfile will be named using the scheme
+``<task name>:<job name>.log`` where the job name will be one of ``split``,
+``process:<number>``, ``merge`` for the `DistributeBackend`.
+
+
 .. _guide-task-files:
 
 Writing task-files
