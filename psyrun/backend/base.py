@@ -56,6 +56,12 @@ try:
 except:
     pass
 
+import time
+print("")
+print("----------------------------------------------------------------------")
+print("Job started ({{}})".format(time.strftime('%a, %d %b %Y %H:%M:%S, %Z')))
+print("----------------------------------------------------------------------")
+
 import os
 os.chdir({taskdir!r})
 
