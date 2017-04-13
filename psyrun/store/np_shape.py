@@ -5,11 +5,16 @@ import numpy as np
 
 def min_shape(args):
     """Returns the minimum shape that encompasses the shape of all *args*."""
+    args = tuple(args)
+    if len(args) <= 0:
+        raise ValueError("args must not be empty.")
+    elif not all(len(a) == len(args[0]) for a in args):
+        raise ValueError("All shapes must have the same number of dimensions.")
     return tuple(max(x) for x in zip(*args))
 
 
 def match_shape(a, shape):
-    """Make *a* match the shape *shape*."""
+    """Make *a* match the shape *(a.shape[0],) + shape*."""
 
     a = np.asarray(a)
     if a.shape == ():
