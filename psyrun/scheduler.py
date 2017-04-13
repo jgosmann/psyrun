@@ -110,6 +110,9 @@ class ImmediateRun(Scheduler):
         int
             Job ID
         """
+        if depends_on is None:
+            depends_on = []
+
         self._cur_id += 1
 
         if any(x in self._failed_jobs for x in depends_on):
