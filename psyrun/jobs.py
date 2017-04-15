@@ -237,8 +237,9 @@ class Clean(JobTreeVisitor):
         self.task = task
         self.names = names
         if uptodate is None:
-            uptodate = {}
-        self.uptodate = uptodate
+            self.uptodate = {}
+        else:
+            self.uptodate = uptodate.status
         self.visit(job)
 
     def visit_job(self, job):
@@ -254,10 +255,12 @@ class Clean(JobTreeVisitor):
                 os.remove(t)
 
     def visit_chain(self, chain):
-        pass
+        for job in chain.jobs:
+            self.visit(job)
 
-    def visit_group(self, chain):
-        pass
+    def visit_group(self, group):
+        for job in group.jobs:
+            self.visit(job)
 
 
 @inherit_docs

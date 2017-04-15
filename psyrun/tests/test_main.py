@@ -122,6 +122,36 @@ def test_fails_for_existing_old_results_by_default(taskenv):
         psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
 
 
+@pytest.mark.parametrize('task', ['square', 'square_load_balanced'])
+def test_psyrun_can_continue_interrupted_job(taskenv, task):
+    psy_main(['run', '--taskdir', taskenv.taskdir, task])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, task, 'result.pkl'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
+    time.sleep(1)
+    with open(os.path.join(
+        taskenv.taskdir, 'task_{}.py'.format(task)), 'a') as f:
+        f.write('\npspace += Param(x=[4, 5])\n')
+    psy_main(['run', '--taskdir', taskenv.taskdir, '-c', task])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, task, 'result.pkl'))
+    assert sorted(result['y']) == [0, 1, 4, 9, 16, 25]
+
+
+def test_psyrun_can_continue_interrupted_job_no_result_file(taskenv):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, 'square', 'result.pkl'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
+    with open(os.path.join(taskenv.taskdir, 'task_square.py'), 'a') as f:
+        f.write('\npspace += Param(x=[4, 5])\n')
+    os.remove(os.path.join(taskenv.workdir, 'square', 'result.pkl'))
+    psy_main(['run', '--taskdir', taskenv.taskdir, '-c', 'square'])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, 'square', 'result.pkl'))
+    assert sorted(result['y']) == [0, 1, 4, 9, 16, 25]
+
+
 def test_allows_to_clean_results(taskenv):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
     time.sleep(1)

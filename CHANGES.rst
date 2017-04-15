@@ -1,6 +1,14 @@
 Changes
 =======
 
+0.6
+---
+
+Bug fixes
+^^^^^^^^^
+
+* Fix the ``psy run`` continue functionality.
+
 0.5.3
 -----
 

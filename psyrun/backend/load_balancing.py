@@ -67,7 +67,7 @@ from psyrun.backend.load_balancing import LoadBalancingWorker
 pspace = task.pspace
 if {cont!r}:
     if os.path.exists({outfile!r}):
-        pspace = missing(pspace, Param(**task.store.load({outfile!r})))
+        os.rename({outfile!r}, {part_outfile!r})
     if os.path.exists({part_outfile!r}):
         pspace = missing(pspace, Param(**task.store.load({part_outfile!r})))
 task.store.save({infile!r}, pspace.build())

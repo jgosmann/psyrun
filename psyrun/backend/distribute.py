@@ -1,6 +1,7 @@
 """Backend for distributed parameter evaluation."""
 
 import os
+import shutil
 
 from psyrun.backend.base import Backend
 from psyrun.jobs import Job, JobChain, JobGroup
@@ -45,20 +46,26 @@ class DistributeBackend(Backend):
         try:
             os.rename(
                 os.path.join(self.workdir, filename),
-                os.path.join(self.workdir, 'out', filename))
+                os.path.join(self.workdir, 'out', 'pre' + self.task.store.ext))
+            return True
         except OSError:
-            pass
+            return False
 
     def create_job(self, cont=False):
         if cont:
             outdir = os.path.join(self.workdir, 'out')
-            self._try_mv_to_out('result' + self.task.store.ext)
-            Splitter.merge(
-                outdir, os.path.join(outdir, 'pre' + self.task.store.ext))
+            if not self._try_mv_to_out('result' + self.task.store.ext):
+                Splitter.merge(
+                    outdir, os.path.join(outdir, 'pre' + self.task.store.ext))
             for filename in os.listdir(outdir):
                 if not filename.startswith('pre'):
                     os.remove(os.path.join(outdir, filename))
             pspace = self.get_missing()
+            try:
+                indir = os.path.join(self.workdir, 'in')
+                shutil.rmtree(indir)
+            except OSError:
+                pass
         else:
             pspace = self.task.pspace
 
@@ -118,7 +125,7 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
         try:
             missing_items = missing(
                 pspace, Param(**self.task.store.load(self.resultfile)))
-        except IOError:
+        except (IOError, OSError):
             missing_items = pspace
             try:
                 for filename in os.listdir(os.path.join(self.workdir, 'out')):
@@ -129,9 +136,9 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
                         missing_items = missing(
                             missing_items,
                             Param(**self.task.store.load(outfile)))
-                    except IOError:
+                    except (IOError, OSError):
                         pass
-            except IOError:
+            except (IOError, OSError):
                 pass
         return missing_items
 
