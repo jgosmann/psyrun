@@ -1,5 +1,8 @@
+from __future__ import unicode_literals
+
 import os
 import os.path
+import re
 import shutil
 import time
 
@@ -381,3 +384,16 @@ def test_psy_run_runs_all_tasks(taskenv):
     result = PickleStore().load(os.path.join(
         taskenv.workdir, 'square2', 'result.pkl'))
     assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+def test_psy_list(taskenv, capsys):
+    expected = set()
+    for entry in os.listdir(taskenv.taskdir):
+        m = re.match(r'^task_(.*)\.py$', entry)
+        if m:
+            expected.add(m.group(1))
+
+    psy_main(['list', '--taskdir', taskenv.taskdir])
+    out, _ = capsys.readouterr()
+    listed = {x.strip() for x in out.split('\n') if x != ''}
+    assert listed == expected
