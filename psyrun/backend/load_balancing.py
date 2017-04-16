@@ -109,14 +109,14 @@ os.rename({part!r}, {whole!r})
             [self.resultfile])
 
     def get_missing(self):
-        pspace = self.task.pspace
+        missing_items = self.task.pspace
         try:
             missing_items = missing(
-                pspace, Param(**self.task.store.load(self.resultfile)))
+                missing_items, Param(**self.task.store.load(self.resultfile)))
         except IOError:
             try:
                 missing_items = missing(
-                    pspace,
+                    missing_items,
                     Param(**self.task.store.load(self.partial_resultfile)))
             except IOError:
                 pass

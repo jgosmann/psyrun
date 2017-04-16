@@ -397,3 +397,103 @@ def test_psy_list(taskenv, capsys):
     out, _ = capsys.readouterr()
     listed = {x.strip() for x in out.split('\n') if x != ''}
     assert listed == expected
+
+
+def test_psy_status(taskenv, capsys):
+    psy_main(['status', '--taskdir', taskenv.taskdir, 'square'])
+    out, _ = capsys.readouterr()
+    assert out == """square:
+  0 out of 4 rows completed.
+
+"""
+
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v', 'square'])
+    out, _ = capsys.readouterr()
+    assert out == """square:
+  0 out of 4 rows completed.
+  Missing parameter sets:
+    {'x': 0}
+    {'x': 1}
+    {'x': 2}
+    {'x': 3}
+
+"""
+
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square'])
+    out, _ = capsys.readouterr()
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v', 'square'])
+    out, _ = capsys.readouterr()
+    assert out == """square:
+  4 out of 4 rows completed.
+  Missing parameter sets:
+
+"""
+
+    os.remove(os.path.join(taskenv.workdir, 'square', 'out', '2.pkl'))
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v', 'square'])
+    out, _ = capsys.readouterr()
+    assert out == """square:
+  4 out of 4 rows completed.
+  Missing parameter sets:
+
+"""
+
+    os.remove(os.path.join(taskenv.workdir, 'square', 'result.pkl'))
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v', 'square'])
+    out, _ = capsys.readouterr()
+    assert out == """square:
+  3 out of 4 rows completed.
+  Missing parameter sets:
+    {'x': 2}
+
+"""
+
+
+def test_psy_status_load_balanced(taskenv, capsys):
+    psy_main(['status', '--taskdir', taskenv.taskdir, 'square_load_balanced'])
+    out, _ = capsys.readouterr()
+    assert out == """square_load_balanced:
+  0 out of 4 rows completed.
+
+"""
+
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v',
+              'square_load_balanced'])
+    out, _ = capsys.readouterr()
+    assert out == """square_load_balanced:
+  0 out of 4 rows completed.
+  Missing parameter sets:
+    {'x': 0}
+    {'x': 1}
+    {'x': 2}
+    {'x': 3}
+
+"""
+
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'square_load_balanced'])
+    out, _ = capsys.readouterr()
+    psy_main(['status', '--taskdir', taskenv.taskdir, '-v',
+              'square_load_balanced'])
+    out, _ = capsys.readouterr()
+    assert out == """square_load_balanced:
+  4 out of 4 rows completed.
+  Missing parameter sets:
+
+"""
+
+
+@pytest.mark.parametrize('store', [PickleStore(), NpzStore(), H5Store()])
+def test_psy_merge(tmpdir, store):
+    resultfile = os.path.join(str(tmpdir), 'result' + store.ext)
+    outdir = os.path.join(str(tmpdir), 'out')
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+
+    data_segments = ({'x': [1]}, {'x': [2]})
+    for i, d in enumerate(data_segments):
+        store.save(os.path.join(outdir, str(i) + store.ext), d)
+
+    psy_main(['merge', outdir, resultfile])
+    merged = store.load(resultfile)
+    assert list(merged.keys()) == ['x']
+    assert np.all(np.asarray(merged['x']) == np.array([1, 2]))
