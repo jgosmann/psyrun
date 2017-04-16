@@ -1,13 +1,14 @@
 Changes
 =======
 
-0.6
----
+0.5.4
+-----
 
 Bug fixes
 ^^^^^^^^^
 
 * Fix the ``psy run`` continue functionality.
+
 
 0.5.3
 -----
@@ -25,7 +26,6 @@ Bug fixes
   float where ``np.nan`` can be used.
 
 0.5.2
-
 -----
 
 Bug fixes
