@@ -6,6 +6,7 @@ import re
 import shutil
 import time
 
+import numpy as np
 import pytest
 
 from psyrun.main import psy_main
