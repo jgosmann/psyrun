@@ -11,6 +11,7 @@ import warnings
 from psyrun.backend.distribute import Splitter
 from psyrun.exceptions import TaskWorkdirDirtyWarning
 from psyrun.jobs import Clean, Fullname, Submit, Uptodate
+from psyrun.store import AutodetectStore
 from psyrun.tasks import PackageLoader
 from psyrun.utils.venv import init_virtualenv
 
@@ -198,14 +199,8 @@ class MergeCmd(Command):
             'merged', type=str, help="file to write the merged result to")
 
     def run(self):
-        ext = os.path.splitext(self.args.merged)[1].lower()
-        if ext == '.npz':
-            from psyrun.store.npz import NpzStore as Store
-        elif ext == '.h5':
-            from psyrun.store.h5 import H5Store as Store
-        else:
-            from psyrun.store.pickle import PickleStore as Store
-        Splitter.merge(self.args.directory, self.args.merged, store=Store())
+        store = AutodetectStore.get_concrete_store(self.args.merged)
+        Splitter.merge(self.args.directory, self.args.merged, store=store)
 
 
 class StatusCmd(TaskselCmd):

@@ -77,14 +77,16 @@ class AutodetectStore(Store):
     registry = {
         ep.name: ep.load() for ep in iter_entry_points('psyrun.stores')}
 
-    def append(self, filename, data):
+    @classmethod
+    def get_concrete_store(cls, filename):
         _, ext = os.path.splitext(filename)
-        return self.registry[ext]().append(filename, data)
+        return cls.registry[ext.lower()]()
+
+    def append(self, filename, data):
+        return self.get_concrete_store(filename).append(filename, data)
 
     def save(self, filename, data):
-        _, ext = os.path.splitext(filename)
-        return self.registry[ext]().save(filename, data)
+        return self.get_concrete_store(filename).save(filename, data)
 
     def load(self, filename, row=None):
-        _, ext = os.path.splitext(filename)
-        return self.registry[ext]().load(filename, row=row)
+        return self.get_concrete_store(filename).load(filename, row=row)

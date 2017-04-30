@@ -4,6 +4,14 @@ Changes
 0.6
 ---
 
+New features
+^^^^^^^^^^^^
+
+* Added ``AutodetectStore`` that determines the appropriate store from the
+  filename extension.
+* Added possibility to let ``psy merge`` custom stores if provided as
+  ``psyrun.stores`` entry point.
+
 Bug fixes
 ^^^^^^^^^
 
