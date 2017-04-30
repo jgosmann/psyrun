@@ -1,7 +1,9 @@
 import pytest
 
 import numpy as np
+from numpy.testing import assert_array_equal
 
+from psyrun.store import AutodetectStore
 from psyrun.store.h5 import H5Store
 from psyrun.store.npz import NpzStore
 from psyrun.store.pickle import PickleStore
@@ -131,3 +133,34 @@ def test_object(store, tmpdir):
     print(store, saved)
     assert saved['a'][0].value == 1
     assert saved['a'][1].value == 2
+
+
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore(), H5Store()])
+def test_autodetect_store_load(store, tmpdir):
+    filename = str(tmpdir.join('r' + store.ext))
+    store.save(filename, {'a': [1., 2., 3.]})
+
+    data = AutodetectStore().load(filename)
+    assert list(data.keys()) == ['a']
+    assert_array_equal(data['a'], [1., 2., 3.])
+
+
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore(), H5Store()])
+def test_autodetect_store_save(store, tmpdir):
+    filename = str(tmpdir.join('r' + store.ext))
+    AutodetectStore().save(filename, {'a': [1., 2., 3.]})
+
+    data = store.load(filename)
+    assert list(data.keys()) == ['a']
+    assert_array_equal(data['a'], [1., 2., 3.])
+
+
+@pytest.mark.parametrize('store', [NpzStore(), PickleStore(), H5Store()])
+def test_autodetect_store_append(store, tmpdir):
+    filename = str(tmpdir.join('r' + store.ext))
+    store.append(filename, {'a': [1.]})
+    AutodetectStore().append(filename, {'a': [2., 3.]})
+
+    data = store.load(filename)
+    assert list(data.keys()) == ['a']
+    assert_array_equal(data['a'], [1., 2., 3.])

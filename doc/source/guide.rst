@@ -275,8 +275,8 @@ Data stores
 
 Psyrun can use different “data stores” to persist data to the hard drive. It
 provides three stores with different advantages and disadvantages described in
-the following. It is possible to provide additional stores by implementing the
-`Store` interface.
+the following. It is possible to use `AutodetectStore` to select the appropriate
+store based on the filename extension.
 
 Note that Psyrun almost always needs to merge multiple data files and thus the
 performance of appending to an existing data file can be quite relevant.
@@ -285,6 +285,16 @@ If you have the possibility to use it, it should probably be your first choice.
 The `NpzStore` should be the second choice. The default `PickleStore` is the
 least efficient choice, but provides support for the widest range of data types
 and has no additional dependencies.
+
+To use other data formats than the three provided ones, implement the `Store`
+interface and provide it as an
+`entry point <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+in the group ``psyrun.stores``. For example, add the following to the ``setup``
+call in your store's ``setup.py`` for a store providing the ``.ext`` format::
+
+    entry_points={
+        'psyrun.stores': ['.ext = pkg.name:ClassName'],
+    }
 
 pickle
 ^^^^^^

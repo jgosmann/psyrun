@@ -1,8 +1,21 @@
 """Base store interface."""
 
+import os.path
+from pkg_resources import iter_entry_points
+
 
 class Store(object):
     """Defines the interface of stores.
+
+    Register implemented stores as
+    `entry points <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+    in the ``psyrun.stores`` groupn. For example, add the following to the
+    ``setup`` call in your store's ``setup.py`` for a store providing the
+    ``.ext`` format::
+
+        entry_points={
+            'psyrun.stores': ['.ext = pkg.name:ClassName'],
+        }
 
     Attributes
     ----------
@@ -56,3 +69,22 @@ class Store(object):
             Loaded data.
         """
         raise NotImplementedError()
+
+
+class AutodetectStore(Store):
+    """Automatically selects the store based on the file extension."""
+
+    registry = {
+        ep.name: ep.load() for ep in iter_entry_points('psyrun.stores')}
+
+    def append(self, filename, data):
+        _, ext = os.path.splitext(filename)
+        return self.registry[ext]().append(filename, data)
+
+    def save(self, filename, data):
+        _, ext = os.path.splitext(filename)
+        return self.registry[ext]().save(filename, data)
+
+    def load(self, filename, row=None):
+        _, ext = os.path.splitext(filename)
+        return self.registry[ext]().load(filename, row=row)
