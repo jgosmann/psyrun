@@ -91,13 +91,35 @@ class Backend(object):
         if not os.path.exists(self.workdir):
             os.makedirs(self.workdir)
 
-    def submit(self, code, name, depends_on=None):
+    def submit_code(self, code, name, depends_on=None):
         """Submits some code to execute to the task scheduler.
 
         Parameters
         ----------
-        code: str
+        code : str
             Code to execute in job.
+        name : str
+            Job name.
+        depends_on : sequence
+            Job IDs that have to finish before the submitted code can be
+            executed.
+
+        Returns
+        -------
+        dict
+            Contains the id of the submitted job under the key ``'id'``.
+        """
+        codefile = os.path.join(self.workdir, name + '.py')
+        return self.submit_file(JobSourceFile(codefile, self.task, code),
+                                name, depends_on=depends_on)
+
+    def submit_file(self, job_source_file, name, depends_on=None):
+        """Submits a source file to execute to the task scheduler.
+
+        Parameters
+        ----------
+        job_source_file : `JobSourceFile`
+            Source file to execute in job.
         name: str
             Job name.
         depends_on: sequence
@@ -109,9 +131,9 @@ class Backend(object):
         dict
             Contains the id of the submitted job under the key ``'id'``.
         """
-        codefile = os.path.join(self.workdir, name + '.py')
         output_filename = os.path.join(self.workdir, name + '.log')
-        JobSourceFile(codefile, self.task, code).write()
+        if not job_source_file.written:
+            job_source_file.write()
 
         for job in self.task.scheduler.get_jobs():
             status = self.task.scheduler.get_status(job)
@@ -119,8 +141,8 @@ class Backend(object):
                 self.task.scheduler.kill(job)
 
         return self.task.scheduler.submit(
-            [self.task.python, codefile], output_filename, name, depends_on,
-            self.task.scheduler_args)
+            [self.task.python, job_source_file.path], output_filename, name,
+            depends_on, self.task.scheduler_args)
 
     def create_job(self, cont=False):
         """Create the job tree to process given task.

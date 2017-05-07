@@ -78,7 +78,7 @@ LoadBalancingWorker.create_statusfile({statusfile!r})
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
-            'pspace', self.submit, code, [self.task.path] + file_dep,
+            'pspace', self.submit_code, code, [self.task.path] + file_dep,
             [self.infile])
 
     # FIXME creates a bunch of identical python files.
@@ -93,7 +93,7 @@ LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.store).start(
             statusfile=self.statusfile)
         for i in range(self.task.max_jobs):
             jobs.append(Job(
-                str(i), self.submit, code, [self.infile],
+                str(i), self.submit_code, code, [self.infile],
                 [self.partial_resultfile]))
 
         group = JobGroup('process', jobs)
@@ -105,7 +105,7 @@ import os
 os.rename({part!r}, {whole!r})
         '''.format(part=self.partial_resultfile, whole=self.resultfile)
         return Job(
-            'finalize', self.submit, code, [self.partial_resultfile],
+            'finalize', self.submit_code, code, [self.partial_resultfile],
             [self.resultfile])
 
     def get_missing(self):

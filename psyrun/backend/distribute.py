@@ -94,7 +94,7 @@ Splitter(
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
-            'split', self.submit, code, [self.task.path] + file_dep,
+            'split', self.submit_code, code, [self.task.path] + file_dep,
             [f for f, _ in splitter.iter_in_out_files()])
 
     def create_process_job(self, splitter):
@@ -106,7 +106,7 @@ from psyrun.backend.distribute import Worker
 execute = task.execute
 Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
             '''.format(infile=infile, outfile=outfile)
-            jobs.append(Job(str(i), self.submit, code, [infile], [outfile]))
+            jobs.append(Job(str(i), self.submit_code, code, [infile], [outfile]))
 
         group = JobGroup('process', jobs)
         return group
@@ -117,7 +117,7 @@ from psyrun.backend.distribute import Splitter
 Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
         '''.format(outdir=splitter.outdir, filename=self.resultfile)
         return Job(
-            'merge', self.submit, code,
+            'merge', self.submit_code, code,
             [f for _, f in splitter.iter_in_out_files()], [self.resultfile])
 
     def get_missing(self):
