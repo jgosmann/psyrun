@@ -18,8 +18,9 @@ class Job(object):
         Name of the job.
     submit_fn : function
         Function to use to submit the job for processing.
-    code : str
-        Python code to execute.
+    submit_kwargs : dict
+        Additional Keyword arguments to submit function (in addition to *name*
+        and *depends_on*).
     dependencies : sequence
         Identifiers of other jobs that need to finish first before this job
         can be run.
@@ -40,10 +41,10 @@ class Job(object):
     targets : sequence of str
         Files created by this job.
     """
-    def __init__(self, name, submit_fn, code, dependencies, targets):
+    def __init__(self, name, submit_fn, submit_kwargs, dependencies, targets):
         self.name = name
         self.submit_fn = submit_fn
-        self.code = code
+        self.submit_kwargs = submit_kwargs
         self.dependencies = dependencies
         self.targets = targets
 
@@ -188,7 +189,8 @@ class Submit(JobTreeVisitor):
         else:
             print('.', self.names[job])
             return [job.submit_fn(
-                job.code, self.names[job], depends_on=self._depends_on)]
+                name=self.names[job], depends_on=self._depends_on,
+                **job.submit_kwargs)]
 
     def visit_group(self, group):
         return sum((self.visit(job) for job in group.jobs), [])

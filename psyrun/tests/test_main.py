@@ -175,7 +175,7 @@ def test_psyrun_workdir_contents(taskenv):
     assert os.path.exists(os.path.join(workdir, 'out', '0.pkl'))
     assert os.path.exists(os.path.join(workdir, 'result.pkl'))
     assert os.path.exists(os.path.join(workdir, 'square:split.py'))
-    assert os.path.exists(os.path.join(workdir, 'square:process:0.py'))
+    assert os.path.exists(os.path.join(workdir, 'square:process.py'))
     assert os.path.exists(os.path.join(workdir, 'square:merge.py'))
     assert os.path.exists(os.path.join(workdir, 'square:split.log'))
     assert os.path.exists(os.path.join(workdir, 'square:process:0.log'))
@@ -191,9 +191,7 @@ def test_psyrun_workdir_contents_load_balanced(taskenv):
     assert os.path.exists(os.path.join(
         workdir, 'square_load_balanced:pspace.py'))
     assert os.path.exists(os.path.join(
-        workdir, 'square_load_balanced:process:0.py'))
-    assert os.path.exists(os.path.join(
-        workdir, 'square_load_balanced:process:1.py'))
+        workdir, 'square_load_balanced:process.py'))
     assert os.path.exists(os.path.join(
         workdir, 'square_load_balanced:process:0.log'))
     assert os.path.exists(os.path.join(
