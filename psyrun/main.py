@@ -217,7 +217,8 @@ class StatusCmd(TaskselCmd):
             help="print missing parameter sets")
 
     def run_task(self, task):
-        missing = task.backend(task).get_missing()
+        backend = task.backend(task)
+        missing = backend.get_missing()
         print("{}:".format(task.name))
         print("  {} out of {} rows completed.".format(
             len(task.pspace) - len(missing), len(task.pspace)))
@@ -225,6 +226,22 @@ class StatusCmd(TaskselCmd):
             print("  Missing parameter sets:")
             for pset in missing.iterate():
                 print('   ', pset)
+
+            queued = backend.get_queued()
+            if queued is not None:
+                print("  Queued parameter sets:")
+                for pset in queued.iterate():
+                    print('   ', pset)
+
+            failed = backend.get_failed()
+            if failed is not None:
+                if len(failed) > 0:
+                    print("  Failed jobs:")
+                    for job in failed:
+                        print('   ', job)
+                else:
+                    print("  No failed jobs.")
+
         print("")
 
 

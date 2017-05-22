@@ -170,3 +170,17 @@ class Backend(object):
         the task definition, but that have not been evaluated yet.
         """
         raise NotImplementedError
+
+    def get_queued(self):
+        """Returns parameter sets that are still in queue to be processed.
+
+        May return ``None`` if this is not supported by the backend.
+        """
+        raise NotImplementedError()
+
+    def get_failed(self):
+        """Returns a list of failed jobs.
+
+        May return ``None`` if this is not supported by the backend.
+        """
+        raise NotImplementedError()

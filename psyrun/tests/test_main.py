@@ -15,34 +15,7 @@ from psyrun.store.h5 import H5Store
 from psyrun.store.npz import NpzStore
 from psyrun.store.pickle import PickleStore
 from psyrun.tasks import TaskDef, Config
-from psyrun.utils.testing import MockScheduler
-
-
-TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
-
-
-class TaskEnv(object):
-    def __init__(self, tmpdir):
-        self.rootdir = str(tmpdir)
-        self.taskdir = os.path.join(str(tmpdir), 'tasks')
-        self.workdir = os.path.join(str(tmpdir), 'work')
-
-        shutil.copytree(TASKDIR, self.taskdir)
-        with open(os.path.join(self.taskdir, 'psy-conf.py'), 'w') as f:
-            f.write('workdir = {0!r}'.format(self.workdir))
-
-
-@pytest.fixture
-def taskenv(tmpdir, request):
-    env = TaskEnv(tmpdir)
-    cwd = os.getcwd()
-
-    def fin():
-        os.chdir(cwd)
-
-    request.addfinalizer(fin)
-    os.chdir(str(env.rootdir))
-    return env
+from psyrun.utils.testing import MockScheduler, TASKDIR, taskenv
 
 
 @pytest.fixture
@@ -415,6 +388,8 @@ def test_psy_status(taskenv, capsys):
     {'x': 1}
     {'x': 2}
     {'x': 3}
+  Queued parameter sets:
+  No failed jobs.
 
 """
 
@@ -425,6 +400,8 @@ def test_psy_status(taskenv, capsys):
     assert out == """square:
   4 out of 4 rows completed.
   Missing parameter sets:
+  Queued parameter sets:
+  No failed jobs.
 
 """
 
@@ -434,6 +411,9 @@ def test_psy_status(taskenv, capsys):
     assert out == """square:
   4 out of 4 rows completed.
   Missing parameter sets:
+  Queued parameter sets:
+  Failed jobs:
+    square:process:2
 
 """
 
@@ -444,6 +424,9 @@ def test_psy_status(taskenv, capsys):
   3 out of 4 rows completed.
   Missing parameter sets:
     {'x': 2}
+  Queued parameter sets:
+  Failed jobs:
+    square:process:2
 
 """
 

@@ -2,10 +2,40 @@
 
 import os.path
 import pickle
+import shutil
 import subprocess
+
+import pytest
 
 from psyrun.scheduler import JobStatus, Scheduler
 from psyrun.utils.doc import inherit_docs
+
+
+TASKDIR = os.path.join(os.path.dirname(__file__), '../tests/tasks')
+
+
+class TaskEnv(object):
+    def __init__(self, tmpdir):
+        self.rootdir = str(tmpdir)
+        self.taskdir = os.path.join(str(tmpdir), 'tasks')
+        self.workdir = os.path.join(str(tmpdir), 'work')
+
+        shutil.copytree(TASKDIR, self.taskdir)
+        with open(os.path.join(self.taskdir, 'psy-conf.py'), 'w') as f:
+            f.write('workdir = {0!r}'.format(self.workdir))
+
+
+@pytest.fixture
+def taskenv(tmpdir, request):
+    env = TaskEnv(tmpdir)
+    cwd = os.getcwd()
+
+    def fin():
+        os.chdir(cwd)
+
+    request.addfinalizer(fin)
+    os.chdir(str(env.rootdir))
+    return env
 
 
 @inherit_docs

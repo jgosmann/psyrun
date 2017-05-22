@@ -129,6 +129,12 @@ os.rename({part!r}, {whole!r})
                 pass
         return missing_items
 
+    def get_queued(self):
+        return None
+
+    def get_failed(self):
+        return None
+
 
 class LoadBalancingWorker(object):
     """Maps a function to the parameter space supporting other

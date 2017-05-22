@@ -151,6 +151,49 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
                 pass
         return missing_items
 
+    def get_queued(self):
+        scheduler = self.task.scheduler
+        status = [scheduler.get_status(j) for j in scheduler.get_jobs()]
+
+        for s in status:
+            if s.status != 'D' and self.task.name + ':split' in s.name:
+                return Param(**self.task.store.load(self.pspace_file))
+
+        queued = Param()
+        for s in status:
+            if s.status != 'D' and self.task.name + ':process' in s.name:
+                num = s.name.rsplit(':', 1)[-1]
+                filename = os.path.join(
+                    self.workdir, 'in', num + self.task.store.ext)
+                queued += Param(**self.task.store.load(filename))
+        return queued
+
+    def get_failed(self):
+        scheduler = self.task.scheduler
+        status = (scheduler.get_status(j) for j in scheduler.get_jobs())
+        queued = [s.name for s in status if s.status != 'D']
+
+        indir = os.path.join(self.workdir, 'in')
+        if (not os.path.exists(indir) or
+                self.task.name + ':split' in queued):
+            return []
+        elif not os.path.exists(indir) or len(os.listdir(indir)) == 0:
+            return [self.task.name + ':split']
+
+        failed = []
+        for filename in os.listdir(indir):
+            if not os.path.exists(os.path.join(self.workdir, 'out', filename)):
+                jobname = self.task.name + ':process:' + os.path.splitext(
+                    filename)[0]
+                if jobname not in queued:
+                    failed.append(jobname)
+
+        if len(failed) == 0:
+            if not os.path.exists(self.resultfile):
+                return [self.task.name + ':merge']
+
+        return failed
+
 
 class Splitter(object):
     """Split a parameter space into multiple input files and merge results
