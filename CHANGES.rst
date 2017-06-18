@@ -17,6 +17,7 @@ Bug fixes
 
 * Fix the ``psy run`` continue functionality.
 
+
 0.5.3
 -----
 
@@ -32,8 +33,8 @@ Bug fixes
 * Fix merging of npz files with missing integer values by converting them to
   float where ``np.nan`` can be used.
 
-0.5.2
 
+0.5.2
 -----
 
 Bug fixes
