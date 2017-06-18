@@ -3,7 +3,10 @@
 from __future__ import print_function
 
 import argparse
+from importlib import import_module
+import os
 import os.path
+import pkg_resources
 import shutil
 import sys
 import warnings
@@ -215,6 +218,51 @@ class MergeCmd(Command):
         Splitter.merge(self.args.directory, self.args.merged, store=store)
 
 
+class NewTaskCmd(TaskdirCmd):
+    short_desc = "create new task"
+    long_desc = "Copy task file template to a new task file."
+
+    def add_args(self):
+        super(NewTaskCmd, self).add_args()
+        self.parser.add_argument('name', type=str, help="name of new task")
+        self.parser.add_argument(
+            '--scheduler', '-s', type=str, default='ImmediateRun',
+            help="scheduler to use for task and pre-fill scheduler arguments")
+
+    def run(self):
+        scheduler = self.args.scheduler.rsplit('.', 1)
+        assert len(scheduler) in [1, 2]
+        if len(scheduler) == 1:
+            scheduler_mod = 'psyrun.scheduler'
+            scheduler = scheduler[0]
+        elif len(scheduler) == 2:
+            scheduler_mod, scheduler = scheduler
+
+        mod = import_module(scheduler_mod)
+        scheduler_cls = getattr(mod, scheduler)
+        if hasattr(scheduler_cls, 'USER_DEFAULT_ARGS'):
+            scheduler_args = scheduler_cls.USER_DEFAULT_ARGS
+        else:
+            scheduler_args = {}
+
+        template = pkg_resources.resource_string('psyrun', 'task.py.template')
+        template = template.decode('utf-8').format(
+            scheduler_mod=scheduler_mod, scheduler=scheduler,
+            scheduler_args=scheduler_args)
+
+        path = os.path.join(
+            self.args.taskdir[0], 'task_' + self.args.name + '.py')
+        if not os.path.exists(self.args.taskdir[0]):
+            os.makedirs(self.args.taskdir[0])
+        elif os.path.exists(path):
+            print('Task {} already exists.'.format(self.args.name),
+                  file=sys.stderr)
+            return -1
+
+        with open(path, 'w') as f:
+            f.write(template)
+
+
 class StatusCmd(TaskselCmd):
     short_desc = "print status of tasks"
     long_desc = (
@@ -275,6 +323,7 @@ commands.update({
     'kill': KillCmd,
     'list': ListCmd,
     'merge': MergeCmd,
+    'new-task': NewTaskCmd,
     'status': StatusCmd,
     'test': TestCmd,
 })

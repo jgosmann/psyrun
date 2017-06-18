@@ -174,6 +174,16 @@ merge
 Merges all output files in *directory* into a single file *merged*. The filename
 extension of *merged* is used to determine the input and output format.
 
+.. _guide-cmd-new-task:
+
+new-task
+^^^^^^^^
+
+``psy new-task [-h] [--taskdir TASKDIR] [--scheduler SCHEDULER] name``
+
+Creates a new template task with given name. It will use template parameters for
+the given scheduler.
+
 status
 ^^^^^^
 
@@ -214,10 +224,12 @@ Writing task-files
 ------------------
 
 Each task is defined in a Python file with the name ``task_<name>.py``. That
-means any valid Python code can be used in the definition of the task. There
-are certain module level variables that have a special meaning. The two most
-important are ``pspace``, defining the parameter space to explore, and
-``execute`` defining the function to evaluate a single parameter assignment.
+means any valid Python code can be used in the definition of the task. You can
+create template task files with the :ref:`new-task command
+<guide-cmd-new-task>`. There are certain module level variables that have
+a special meaning. The two most important are ``pspace``, defining the parameter
+space to explore, and ``execute`` defining the function to evaluate a single
+parameter assignment.
 
 Also consider setting ``store`` to either `H5Store` or `NpzStore`. This
 requires additional dependencies to be installed and imposes some limitations

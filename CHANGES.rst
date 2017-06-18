@@ -7,6 +7,7 @@ Changes
 New features
 ^^^^^^^^^^^^
 
+* Add ``psy new-task`` and ``psy kill`` commands.
 * Added ``AutodetectStore`` that determines the appropriate store from the
   filename extension.
 * Added possibility to let ``psy merge`` custom stores if provided as

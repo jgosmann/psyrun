@@ -486,3 +486,24 @@ def test_psy_merge(tmpdir, store):
     merged = store.load(resultfile)
     assert list(merged.keys()) == ['x']
     assert np.all(np.asarray(merged['x']) == np.array([1, 2]))
+
+
+def test_new_task(taskenv):
+    psy_main(['new-task', '--taskdir', taskenv.taskdir, 'new-task-test'])
+    assert os.path.exists(
+        os.path.join(taskenv.taskdir, 'task_new-task-test.py'))
+    assert psy_main(
+        ['new-task', '--taskdir', taskenv.taskdir, 'new-task-test']) != 0
+
+
+@pytest.mark.parametrize('scheduler_str', ['psyrun.scheduler.Sqsub', 'Sqsub'])
+def test_new_task_scheduler_arg(taskenv, scheduler_str):
+    psy_main(['new-task', '--taskdir', taskenv.taskdir, '-s', scheduler_str,
+              'new-task-test'])
+    path = os.path.join(taskenv.taskdir, 'task_new-task-test.py')
+    with open(path, 'r') as f:
+        data = f.read()
+    assert 'from psyrun.scheduler import Sqsub' in data
+    assert 'scheduler = Sqsub' in data
+    assert 'scheduler_args = {' in data
+    assert 'scheduler_args = {}' not in data

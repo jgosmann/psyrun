@@ -12,6 +12,8 @@ JobStatus = namedtuple('JobStatus', ['id', 'status', 'name'])
 class Scheduler(object):
     """Scheduler interface."""
 
+    USER_DEFAULT_ARGS = {}
+
     def submit(
             self, args, output_filename, name=None, depends_on=None,
             scheduler_args=None):
@@ -139,6 +141,13 @@ class ImmediateRun(Scheduler):
 
 class Sqsub(Scheduler):
     """sqsub (sharcnet) scheduler."""
+
+    USER_DEFAULT_ARGS = {
+        'timelimit': '1h',
+        'n_cpus': 1,
+        'n_nodes': 1,
+        'memory': '1G',
+    }
 
     class _Option(object):
         def __init__(self, name, conversion=str):
