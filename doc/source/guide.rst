@@ -151,6 +151,14 @@ clean
 Clean one or more tasks passed as arguments to the command. This means
 all files generated for the task will be deleted.
 
+kill
+^^^^
+
+``psy kill [-h] [--taskdir TASKDIR] [task [task ...]]``
+
+Kill all running and queued jobs of the tasks passed as arguments to the
+command.
+
 list
 ^^^^
 

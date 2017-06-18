@@ -464,6 +464,13 @@ def test_psy_status_load_balanced(taskenv, capsys):
 """
 
 
+def test_psy_kill(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
+    assert len(scheduler.joblist) > 0
+    psy_main(['kill', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
+    assert len(scheduler.joblist) == 0
+
+
 @pytest.mark.parametrize('store', [PickleStore(), NpzStore(), H5Store()])
 def test_psy_merge(tmpdir, store):
     resultfile = os.path.join(str(tmpdir), 'result' + store.ext)

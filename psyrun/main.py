@@ -179,6 +179,18 @@ class CleanCmd(TaskselCmd):
         shutil.rmtree(path)
 
 
+class KillCmd(TaskselCmd):
+    short_desc = "kill task jobs"
+    long_desc = "Kill all running and queued task jobs."
+    default_to_all = False
+
+    def run_task(self, task):
+        for job in task.scheduler.get_jobs():
+            status = task.scheduler.get_status(job)
+            if status is not None and status != 'D':
+                task.scheduler.kill(job)
+
+
 class ListCmd(TaskdirCmd):
     short_desc = "list tasks"
     long_desc = "Lists all available tasks."
@@ -260,6 +272,7 @@ class TestCmd(TaskselCmd):
 commands.update({
     'run': RunCmd,
     'clean': CleanCmd,
+    'kill': KillCmd,
     'list': ListCmd,
     'merge': MergeCmd,
     'status': StatusCmd,
