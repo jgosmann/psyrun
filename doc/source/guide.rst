@@ -374,6 +374,10 @@ parenthesis):
 
 For more details see the ``sqsub`` help.
 
+Instead of a fixed value, you can also assign a function accepting the job
+name as single argument to `Sqsub` scheduler arguments. The function will be
+called with the job name to determine the value of the argument.
+
 
 Interfacing other schedulers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
