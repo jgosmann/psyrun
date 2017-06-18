@@ -71,11 +71,19 @@ class Store(object):
         raise NotImplementedError()
 
 
+def _safe_ep_load():
+    for ep in iter_entry_points('psyrun.stores'):
+        try:
+            yield ep.name, ep.load()
+        except ImportError:
+            pass
+
+
 class AutodetectStore(Store):
     """Automatically selects the store based on the file extension."""
 
-    registry = {
-        ep.name: ep.load() for ep in iter_entry_points('psyrun.stores')}
+
+    registry = dict(_safe_ep_load())
 
     @classmethod
     def get_concrete_store(cls, filename):
