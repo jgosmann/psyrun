@@ -11,6 +11,7 @@ New features
   filename extension.
 * Added possibility to let ``psy merge`` custom stores if provided as
   ``psyrun.stores`` entry point.
+* Added capability to set scheduler arguments based on the job name.
 
 Bug fixes
 ^^^^^^^^^
