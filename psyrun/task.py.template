@@ -1,0 +1,28 @@
+from psyrun import Param
+from psyrun.backend import DistributeBackend
+from {scheduler_mod} import {scheduler}
+from psyrun.store import PickleStore
+
+pspace = Param(x=[0, 1]) * Param(y=[2, 3])  # Parameter space
+
+file_dep = []  # List of additional files the task depends on
+resultfile = None  # Path to file with results to write
+store = PickleStore  # Input/output backend
+workdir = 'psy-work'  # Working directory to store results and processing files
+overwrite_dirty = True  # Overwrite dirty workdirs without warning
+
+max_jobs = 100  # Maximum number of processing jobs
+min_items = 1  # Minimum number of items to assign to each processing job
+
+backend = DistributeBackend  # Backend for job execution
+scheduler = {scheduler}  # Scheduler to submit individual jobs
+scheduler_args = {scheduler_args!r}  # Scheduler arguments
+# python = sys.executable  # Path to Python interpreter to use
+
+max_jobs = 2
+backend = LoadBalancingBackend
+
+
+def execute(**kwargs):
+    """Task implementation."""
+    return {{}}

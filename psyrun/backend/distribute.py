@@ -3,7 +3,7 @@
 import os
 import shutil
 
-from psyrun.backend.base import Backend
+from psyrun.backend.base import Backend, JobSourceFile
 from psyrun.jobs import Job, JobChain, JobGroup
 from psyrun.pspace import dict_concat, missing, Param
 from psyrun.mapper import map_pspace_hdd_backed
@@ -94,19 +94,28 @@ Splitter(
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
-            'split', self.submit, code, [self.task.path] + file_dep,
+            'split', self.submit_code, {'code': code},
+            [self.task.path] + file_dep,
             [f for f, _ in splitter.iter_in_out_files()])
 
     def create_process_job(self, splitter):
+        source_file = JobSourceFile(
+            os.path.join(self.workdir, self.task.name + ':process.py'),
+            self.task,
+            '''
+import sys
+from psyrun.backend.distribute import Worker
+execute = task.execute
+Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2])
+            ''')
+
         jobs = []
         for i, (infile, outfile) in enumerate(
                 splitter.iter_in_out_files()):
-            code = '''
-from psyrun.backend.distribute import Worker
-execute = task.execute
-Worker(store=task.store).start(execute, {infile!r}, {outfile!r})
-            '''.format(infile=infile, outfile=outfile)
-            jobs.append(Job(str(i), self.submit, code, [infile], [outfile]))
+            jobs.append(Job(
+                str(i), self.submit_file,
+                {'job_source_file': source_file, 'args': [infile, outfile]},
+                [infile], [outfile]))
 
         group = JobGroup('process', jobs)
         return group
@@ -117,7 +126,7 @@ from psyrun.backend.distribute import Splitter
 Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
         '''.format(outdir=splitter.outdir, filename=self.resultfile)
         return Job(
-            'merge', self.submit, code,
+            'merge', self.submit_code, {'code': code},
             [f for _, f in splitter.iter_in_out_files()], [self.resultfile])
 
     def get_missing(self):
@@ -141,6 +150,49 @@ Splitter.merge({outdir!r}, {filename!r}, append=False, store=task.store)
             except (IOError, OSError):
                 pass
         return missing_items
+
+    def get_queued(self):
+        scheduler = self.task.scheduler
+        status = [scheduler.get_status(j) for j in scheduler.get_jobs()]
+
+        for s in status:
+            if s.status != 'D' and self.task.name + ':split' in s.name:
+                return Param(**self.task.store.load(self.pspace_file))
+
+        queued = Param()
+        for s in status:
+            if s.status != 'D' and self.task.name + ':process' in s.name:
+                num = s.name.rsplit(':', 1)[-1]
+                filename = os.path.join(
+                    self.workdir, 'in', num + self.task.store.ext)
+                queued += Param(**self.task.store.load(filename))
+        return queued
+
+    def get_failed(self):
+        scheduler = self.task.scheduler
+        status = (scheduler.get_status(j) for j in scheduler.get_jobs())
+        queued = [s.name for s in status if s.status != 'D']
+
+        indir = os.path.join(self.workdir, 'in')
+        if (not os.path.exists(indir) or
+                self.task.name + ':split' in queued):
+            return []
+        elif not os.path.exists(indir) or len(os.listdir(indir)) == 0:
+            return [self.task.name + ':split']
+
+        failed = []
+        for filename in os.listdir(indir):
+            if not os.path.exists(os.path.join(self.workdir, 'out', filename)):
+                jobname = self.task.name + ':process:' + os.path.splitext(
+                    filename)[0]
+                if jobname not in queued:
+                    failed.append(jobname)
+
+        if len(failed) == 0:
+            if not os.path.exists(self.resultfile):
+                return [self.task.name + ':merge']
+
+        return failed
 
 
 class Splitter(object):

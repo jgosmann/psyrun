@@ -3,7 +3,10 @@
 from __future__ import print_function
 
 import argparse
+from importlib import import_module
+import os
 import os.path
+import pkg_resources
 import shutil
 import sys
 import warnings
@@ -11,6 +14,7 @@ import warnings
 from psyrun.backend.distribute import Splitter
 from psyrun.exceptions import TaskWorkdirDirtyWarning
 from psyrun.jobs import Clean, Fullname, Submit, Uptodate
+from psyrun.store import AutodetectStore
 from psyrun.tasks import PackageLoader
 from psyrun.utils.venv import init_virtualenv
 
@@ -178,6 +182,18 @@ class CleanCmd(TaskselCmd):
         shutil.rmtree(path)
 
 
+class KillCmd(TaskselCmd):
+    short_desc = "kill task jobs"
+    long_desc = "Kill all running and queued task jobs."
+    default_to_all = False
+
+    def run_task(self, task):
+        for job in task.scheduler.get_jobs():
+            status = task.scheduler.get_status(job)
+            if status is not None and status != 'D':
+                task.scheduler.kill(job)
+
+
 class ListCmd(TaskdirCmd):
     short_desc = "list tasks"
     long_desc = "Lists all available tasks."
@@ -198,14 +214,53 @@ class MergeCmd(Command):
             'merged', type=str, help="file to write the merged result to")
 
     def run(self):
-        ext = os.path.splitext(self.args.merged)[1].lower()
-        if ext == '.npz':
-            from psyrun.store.npz import NpzStore as Store
-        elif ext == '.h5':
-            from psyrun.store.h5 import H5Store as Store
+        store = AutodetectStore.get_concrete_store(self.args.merged)
+        Splitter.merge(self.args.directory, self.args.merged, store=store)
+
+
+class NewTaskCmd(TaskdirCmd):
+    short_desc = "create new task"
+    long_desc = "Copy task file template to a new task file."
+
+    def add_args(self):
+        super(NewTaskCmd, self).add_args()
+        self.parser.add_argument('name', type=str, help="name of new task")
+        self.parser.add_argument(
+            '--scheduler', '-s', type=str, default='ImmediateRun',
+            help="scheduler to use for task and pre-fill scheduler arguments")
+
+    def run(self):
+        scheduler = self.args.scheduler.rsplit('.', 1)
+        assert len(scheduler) in [1, 2]
+        if len(scheduler) == 1:
+            scheduler_mod = 'psyrun.scheduler'
+            scheduler = scheduler[0]
+        elif len(scheduler) == 2:
+            scheduler_mod, scheduler = scheduler
+
+        mod = import_module(scheduler_mod)
+        scheduler_cls = getattr(mod, scheduler)
+        if hasattr(scheduler_cls, 'USER_DEFAULT_ARGS'):
+            scheduler_args = scheduler_cls.USER_DEFAULT_ARGS
         else:
-            from psyrun.store.pickle import PickleStore as Store
-        Splitter.merge(self.args.directory, self.args.merged, store=Store())
+            scheduler_args = {}
+
+        template = pkg_resources.resource_string('psyrun', 'task.py.template')
+        template = template.decode('utf-8').format(
+            scheduler_mod=scheduler_mod, scheduler=scheduler,
+            scheduler_args=scheduler_args)
+
+        path = os.path.join(
+            self.args.taskdir[0], 'task_' + self.args.name + '.py')
+        if not os.path.exists(self.args.taskdir[0]):
+            os.makedirs(self.args.taskdir[0])
+        elif os.path.exists(path):
+            print('Task {} already exists.'.format(self.args.name),
+                  file=sys.stderr)
+            return -1
+
+        with open(path, 'w') as f:
+            f.write(template)
 
 
 class StatusCmd(TaskselCmd):
@@ -222,7 +277,8 @@ class StatusCmd(TaskselCmd):
             help="print missing parameter sets")
 
     def run_task(self, task):
-        missing = task.backend(task).get_missing()
+        backend = task.backend(task)
+        missing = backend.get_missing()
         print("{}:".format(task.name))
         print("  {} out of {} rows completed.".format(
             len(task.pspace) - len(missing), len(task.pspace)))
@@ -230,6 +286,22 @@ class StatusCmd(TaskselCmd):
             print("  Missing parameter sets:")
             for pset in missing.iterate():
                 print('   ', pset)
+
+            queued = backend.get_queued()
+            if queued is not None:
+                print("  Queued parameter sets:")
+                for pset in queued.iterate():
+                    print('   ', pset)
+
+            failed = backend.get_failed()
+            if failed is not None:
+                if len(failed) > 0:
+                    print("  Failed jobs:")
+                    for job in failed:
+                        print('   ', job)
+                else:
+                    print("  No failed jobs.")
+
         print("")
 
 
@@ -248,8 +320,10 @@ class TestCmd(TaskselCmd):
 commands.update({
     'run': RunCmd,
     'clean': CleanCmd,
+    'kill': KillCmd,
     'list': ListCmd,
     'merge': MergeCmd,
+    'new-task': NewTaskCmd,
     'status': StatusCmd,
     'test': TestCmd,
 })

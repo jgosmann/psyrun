@@ -3,7 +3,7 @@
 import fcntl
 import os
 
-from psyrun.backend.base import Backend
+from psyrun.backend.base import Backend, JobSourceFile
 from psyrun.jobs import Job, JobChain, JobGroup
 from psyrun.mapper import map_pspace
 from psyrun.pspace import missing, Param
@@ -78,23 +78,29 @@ LoadBalancingWorker.create_statusfile({statusfile!r})
         file_dep = [os.path.join(os.path.dirname(self.task.path), f)
                     for f in self.task.file_dep]
         return Job(
-            'pspace', self.submit, code, [self.task.path] + file_dep,
-            [self.infile])
+            'pspace', self.submit_code, {'code': code},
+            [self.task.path] + file_dep, [self.infile])
 
-    # FIXME creates a bunch of identical python files.
     def create_process_job(self):
-        jobs = []
-        code = '''
+        source_file = JobSourceFile(
+            os.path.join(self.workdir, self.task.name + ':process.py'),
+            self.task,
+            '''
+import sys
 from psyrun.backend.load_balancing import LoadBalancingWorker
-LoadBalancingWorker({infile!r}, {outfile!r}, {statusfile!r}, task.store).start(
+LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store).start(
     task.execute)
-        '''.format(
-            infile=self.infile, outfile=self.partial_resultfile,
-            statusfile=self.statusfile)
+            ''')
+
+        jobs = []
         for i in range(self.task.max_jobs):
             jobs.append(Job(
-                str(i), self.submit, code, [self.infile],
-                [self.partial_resultfile]))
+                str(i), self.submit_file,
+                {'job_source_file': source_file, 'args': [
+                    self.infile,
+                    self.partial_resultfile,
+                    self.statusfile
+                ]}, [self.infile], [self.partial_resultfile]))
 
         group = JobGroup('process', jobs)
         return group
@@ -105,7 +111,8 @@ import os
 os.rename({part!r}, {whole!r})
         '''.format(part=self.partial_resultfile, whole=self.resultfile)
         return Job(
-            'finalize', self.submit, code, [self.partial_resultfile],
+            'finalize', self.submit_code, {'code': code},
+            [self.partial_resultfile],
             [self.resultfile])
 
     def get_missing(self):
@@ -121,6 +128,12 @@ os.rename({part!r}, {whole!r})
             except IOError:
                 pass
         return missing_items
+
+    def get_queued(self):
+        return None
+
+    def get_failed(self):
+        return None
 
 
 class LoadBalancingWorker(object):

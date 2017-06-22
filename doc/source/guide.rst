@@ -151,6 +151,14 @@ clean
 Clean one or more tasks passed as arguments to the command. This means
 all files generated for the task will be deleted.
 
+kill
+^^^^
+
+``psy kill [-h] [--taskdir TASKDIR] [task [task ...]]``
+
+Kill all running and queued jobs of the tasks passed as arguments to the
+command.
+
 list
 ^^^^
 
@@ -165,6 +173,16 @@ merge
 
 Merges all output files in *directory* into a single file *merged*. The filename
 extension of *merged* is used to determine the input and output format.
+
+.. _guide-cmd-new-task:
+
+new-task
+^^^^^^^^
+
+``psy new-task [-h] [--taskdir TASKDIR] [--scheduler SCHEDULER] name``
+
+Creates a new template task with given name. It will use template parameters for
+the given scheduler.
 
 status
 ^^^^^^
@@ -206,10 +224,12 @@ Writing task-files
 ------------------
 
 Each task is defined in a Python file with the name ``task_<name>.py``. That
-means any valid Python code can be used in the definition of the task. There
-are certain module level variables that have a special meaning. The two most
-important are ``pspace``, defining the parameter space to explore, and
-``execute`` defining the function to evaluate a single parameter assignment.
+means any valid Python code can be used in the definition of the task. You can
+create template task files with the :ref:`new-task command
+<guide-cmd-new-task>`. There are certain module level variables that have
+a special meaning. The two most important are ``pspace``, defining the parameter
+space to explore, and ``execute`` defining the function to evaluate a single
+parameter assignment.
 
 Also consider setting ``store`` to either `H5Store` or `NpzStore`. This
 requires additional dependencies to be installed and imposes some limitations
@@ -275,8 +295,8 @@ Data stores
 
 Psyrun can use different “data stores” to persist data to the hard drive. It
 provides three stores with different advantages and disadvantages described in
-the following. It is possible to provide additional stores by implementing the
-`Store` interface.
+the following. It is possible to use `AutodetectStore` to select the appropriate
+store based on the filename extension.
 
 Note that Psyrun almost always needs to merge multiple data files and thus the
 performance of appending to an existing data file can be quite relevant.
@@ -285,6 +305,16 @@ If you have the possibility to use it, it should probably be your first choice.
 The `NpzStore` should be the second choice. The default `PickleStore` is the
 least efficient choice, but provides support for the widest range of data types
 and has no additional dependencies.
+
+To use other data formats than the three provided ones, implement the `Store`
+interface and provide it as an
+`entry point <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+in the group ``psyrun.stores``. For example, add the following to the ``setup``
+call in your store's ``setup.py`` for a store providing the ``.ext`` format::
+
+    entry_points={
+        'psyrun.stores': ['.ext = pkg.name:ClassName'],
+    }
 
 pickle
 ^^^^^^
@@ -363,6 +393,10 @@ parenthesis):
   individual job.
 
 For more details see the ``sqsub`` help.
+
+Instead of a fixed value, you can also assign a function accepting the job
+name as single argument to `Sqsub` scheduler arguments. The function will be
+called with the job name to determine the value of the argument.
 
 
 Interfacing other schedulers

@@ -43,7 +43,12 @@ setup(
     entry_points={
         'console_scripts': [
             'psy = psyrun.main:psy_main'
-        ]
+        ],
+        'psyrun.stores': [
+            '.pkl = psyrun.store.pickle:PickleStore',
+            '.npz = psyrun.store.npz:NpzStore',
+            '.h5 = psyrun.store.h5:H5Store',
+        ],
     },
 
     classifiers=[

@@ -12,6 +12,8 @@ JobStatus = namedtuple('JobStatus', ['id', 'status', 'name'])
 class Scheduler(object):
     """Scheduler interface."""
 
+    USER_DEFAULT_ARGS = {}
+
     def submit(
             self, args, output_filename, name=None, depends_on=None,
             scheduler_args=None):
@@ -140,6 +142,13 @@ class ImmediateRun(Scheduler):
 class Sqsub(Scheduler):
     """sqsub (sharcnet) scheduler."""
 
+    USER_DEFAULT_ARGS = {
+        'timelimit': '1h',
+        'n_cpus': 1,
+        'n_nodes': 1,
+        'memory': '1G',
+    }
+
     class _Option(object):
         def __init__(self, name, conversion=str):
             self.name = name
@@ -214,7 +223,8 @@ class Sqsub(Scheduler):
         if scheduler_args is None:
             scheduler_args = dict()
         else:
-            scheduler_args = dict(scheduler_args)
+            scheduler_args = {k: v(name) if callable(v) else v
+                              for k, v in scheduler_args.items()}
 
         # Checking whether jobs depending on are completed before submitting
         # the new job is a race condition, but I see no possibility to avoid

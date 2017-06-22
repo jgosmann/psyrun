@@ -15,34 +15,7 @@ from psyrun.store.h5 import H5Store
 from psyrun.store.npz import NpzStore
 from psyrun.store.pickle import PickleStore
 from psyrun.tasks import TaskDef, Config
-from psyrun.utils.testing import MockScheduler
-
-
-TASKDIR = os.path.join(os.path.dirname(__file__), 'tasks')
-
-
-class TaskEnv(object):
-    def __init__(self, tmpdir):
-        self.rootdir = str(tmpdir)
-        self.taskdir = os.path.join(str(tmpdir), 'tasks')
-        self.workdir = os.path.join(str(tmpdir), 'work')
-
-        shutil.copytree(TASKDIR, self.taskdir)
-        with open(os.path.join(self.taskdir, 'psy-conf.py'), 'w') as f:
-            f.write('workdir = {0!r}'.format(self.workdir))
-
-
-@pytest.fixture
-def taskenv(tmpdir, request):
-    env = TaskEnv(tmpdir)
-    cwd = os.getcwd()
-
-    def fin():
-        os.chdir(cwd)
-
-    request.addfinalizer(fin)
-    os.chdir(str(env.rootdir))
-    return env
+from psyrun.utils.testing import MockScheduler, TASKDIR, taskenv
 
 
 @pytest.fixture
@@ -175,7 +148,7 @@ def test_psyrun_workdir_contents(taskenv):
     assert os.path.exists(os.path.join(workdir, 'out', '0.pkl'))
     assert os.path.exists(os.path.join(workdir, 'result.pkl'))
     assert os.path.exists(os.path.join(workdir, 'square:split.py'))
-    assert os.path.exists(os.path.join(workdir, 'square:process:0.py'))
+    assert os.path.exists(os.path.join(workdir, 'square:process.py'))
     assert os.path.exists(os.path.join(workdir, 'square:merge.py'))
     assert os.path.exists(os.path.join(workdir, 'square:split.log'))
     assert os.path.exists(os.path.join(workdir, 'square:process:0.log'))
@@ -191,9 +164,7 @@ def test_psyrun_workdir_contents_load_balanced(taskenv):
     assert os.path.exists(os.path.join(
         workdir, 'square_load_balanced:pspace.py'))
     assert os.path.exists(os.path.join(
-        workdir, 'square_load_balanced:process:0.py'))
-    assert os.path.exists(os.path.join(
-        workdir, 'square_load_balanced:process:1.py'))
+        workdir, 'square_load_balanced:process.py'))
     assert os.path.exists(os.path.join(
         workdir, 'square_load_balanced:process:0.log'))
     assert os.path.exists(os.path.join(
@@ -417,6 +388,8 @@ def test_psy_status(taskenv, capsys):
     {'x': 1}
     {'x': 2}
     {'x': 3}
+  Queued parameter sets:
+  No failed jobs.
 
 """
 
@@ -427,6 +400,8 @@ def test_psy_status(taskenv, capsys):
     assert out == """square:
   4 out of 4 rows completed.
   Missing parameter sets:
+  Queued parameter sets:
+  No failed jobs.
 
 """
 
@@ -436,6 +411,9 @@ def test_psy_status(taskenv, capsys):
     assert out == """square:
   4 out of 4 rows completed.
   Missing parameter sets:
+  Queued parameter sets:
+  Failed jobs:
+    square:process:2
 
 """
 
@@ -446,6 +424,9 @@ def test_psy_status(taskenv, capsys):
   3 out of 4 rows completed.
   Missing parameter sets:
     {'x': 2}
+  Queued parameter sets:
+  Failed jobs:
+    square:process:2
 
 """
 
@@ -483,6 +464,13 @@ def test_psy_status_load_balanced(taskenv, capsys):
 """
 
 
+def test_psy_kill(taskenv, scheduler):
+    psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
+    assert len(scheduler.joblist) > 0
+    psy_main(['kill', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
+    assert len(scheduler.joblist) == 0
+
+
 @pytest.mark.parametrize('store', [PickleStore(), NpzStore(), H5Store()])
 def test_psy_merge(tmpdir, store):
     resultfile = os.path.join(str(tmpdir), 'result' + store.ext)
@@ -498,3 +486,24 @@ def test_psy_merge(tmpdir, store):
     merged = store.load(resultfile)
     assert list(merged.keys()) == ['x']
     assert np.all(np.asarray(merged['x']) == np.array([1, 2]))
+
+
+def test_new_task(taskenv):
+    psy_main(['new-task', '--taskdir', taskenv.taskdir, 'new-task-test'])
+    assert os.path.exists(
+        os.path.join(taskenv.taskdir, 'task_new-task-test.py'))
+    assert psy_main(
+        ['new-task', '--taskdir', taskenv.taskdir, 'new-task-test']) != 0
+
+
+@pytest.mark.parametrize('scheduler_str', ['psyrun.scheduler.Sqsub', 'Sqsub'])
+def test_new_task_scheduler_arg(taskenv, scheduler_str):
+    psy_main(['new-task', '--taskdir', taskenv.taskdir, '-s', scheduler_str,
+              'new-task-test'])
+    path = os.path.join(taskenv.taskdir, 'task_new-task-test.py')
+    with open(path, 'r') as f:
+        data = f.read()
+    assert 'from psyrun.scheduler import Sqsub' in data
+    assert 'scheduler = Sqsub' in data
+    assert 'scheduler_args = {' in data
+    assert 'scheduler_args = {}' not in data

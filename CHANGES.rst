@@ -1,6 +1,21 @@
 Changes
 =======
 
+
+0.6.0
+-----
+
+New features
+^^^^^^^^^^^^
+
+* Add ``psy new-task`` and ``psy kill`` commands.
+* Added ``AutodetectStore`` that determines the appropriate store from the
+  filename extension.
+* Added possibility to let ``psy merge`` custom stores if provided as
+  ``psyrun.stores`` entry point.
+* Added capability to set scheduler arguments based on the job name.
+
+
 0.5.4
 -----
 
@@ -24,6 +39,7 @@ Bug fixes
   Python's recursion depth limit.
 * Fix merging of npz files with missing integer values by converting them to
   float where ``np.nan`` can be used.
+
 
 0.5.2
 -----
