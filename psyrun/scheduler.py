@@ -268,6 +268,7 @@ class Sqsub(Scheduler):
         namedtuple or None
             Returns a tuple with *(id, status, name)* wherein status can be
 
+            - ``'R'`` for a running job
             - ``'Q'`` for a queued job
             - ``'*Q'`` for a queued job waiting on another job to finish
             - ``'Z'`` for a sleeping job
@@ -283,7 +284,7 @@ class Sqsub(Scheduler):
                 stdout = subprocess.check_output(
                     ['sqjobs', str(jobid)], stderr=subprocess.STDOUT,
                     universal_newlines=True)
-                for line in stdout.split(os.linesep)[2:]:
+                for line in stdout.split('\n')[2:]:
                     cols = line.split(None, 5)
                     if len(cols) > 3 and int(cols[0]) == jobid:
                         if cols[2] == 'C':
@@ -312,6 +313,6 @@ class Sqsub(Scheduler):
         stdout = subprocess.check_output(['sqjobs'], universal_newlines=True)
         for line in stdout.split('\n')[2:]:
             cols = line.split(None, 5)
-            if len(cols) > 2 and cols[2] in ['Q', '*Q', 'Z']:
+            if len(cols) > 2 and cols[2] in ['R', 'Q', '*Q', 'Z']:
                 jobid = int(cols[0])
                 self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
