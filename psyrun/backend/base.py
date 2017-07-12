@@ -1,6 +1,7 @@
 """Base backend interface."""
 
 import os
+import stat
 import sys
 
 
@@ -35,6 +36,8 @@ class JobSourceFile(object):
         """Write the job code to the file *self.path*."""
         with open(self.path, 'w') as f:
             f.write(self.full_code)
+            fd = f.fileno()
+            os.fchmod(fd, os.fstat(fd).st_mode | stat.S_IXUSR)
         self.written = True
 
     @property
@@ -149,7 +152,7 @@ class Backend(object):
                 self.task.scheduler.kill(job)
 
         return self.task.scheduler.submit(
-            [self.task.python, job_source_file.path] + args, output_filename,
+            [job_source_file.path] + args, output_filename,
             name, depends_on, self.task.scheduler_args)
 
     def create_job(self, cont=False):
