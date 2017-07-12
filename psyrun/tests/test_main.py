@@ -485,7 +485,7 @@ def test_psy_merge(tmpdir, store):
     psy_main(['merge', outdir, resultfile])
     merged = store.load(resultfile)
     assert list(merged.keys()) == ['x']
-    assert np.all(np.asarray(merged['x']) == np.array([1, 2]))
+    assert np.all(np.asarray(sorted(merged['x'])) == np.array([1, 2]))
 
 
 def test_new_task(taskenv):
