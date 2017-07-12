@@ -1,6 +1,7 @@
 """Job scheduler."""
 
 from collections import namedtuple
+import getpass
 import os
 import os.path
 import subprocess
@@ -316,3 +317,197 @@ class Sqsub(Scheduler):
             if len(cols) > 2 and cols[2] in ['R', 'Q', '*Q', 'Z']:
                 jobid = int(cols[0])
                 self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
+
+
+class Slurm(Scheduler):
+    """Slurm (sbatch) scheduler."""
+
+    USER_DEFAULT_ARGS = {
+        'timelimit': '1h',
+        'n_cpus': 1,
+        'n_nodes': 1,
+        'memory': '1G',
+    }
+
+    class _Option(object):
+        def __init__(self, name, conversion=str):
+            self.name = name
+            self.conversion = conversion
+
+        def build(self, value):
+            raise NotImplementedError()
+
+    class _ShortOption(_Option):
+        def build(self, value):
+            if value is None:
+                return []
+            return [self.name, self.conversion(value)]
+
+    class _LongOption(_Option):
+        def build(self, value):
+            if value is None:
+                return []
+            return [self.name + '=' + self.conversion(value)]
+
+    KNOWN_ARGS = {
+        'timelimit': _ShortOption('-t'),
+        'output_file': _ShortOption('-o'),
+        'n_cpus': _ShortOption('-c'),
+        'n_nodes': _ShortOption('-N'),
+        'memory': _LongOption('--mem-per-cpu'),
+        'depends_on': _ShortOption(
+            '-d', lambda jobids: 'afterok:' + ':'.join(
+                str(x) for x in jobids)),
+        'name': _ShortOption('-J')
+    }
+
+    STATUS_MAP = {
+        'PD': 'Q',
+        'R': 'R',
+        'CA': 'D',
+        'CF': 'R',
+        'CG': 'R',
+        'CD': 'D',
+        'F': 'D',
+        'TO': 'D',
+        'NF': 'D',
+        'RV': 'D',
+        'SE': 'D',
+    }
+
+    def build_args(self, **kwargs):
+        args = []
+        for k, v in kwargs.items():
+            args.extend(self.KNOWN_ARGS[k].build(v))
+        return args
+
+    def __init__(self, workdir=None):
+        if workdir is None:
+            workdir = '/project/{user}/psyrun'.format(user=os.environ['USER'])
+        if not os.path.exists(workdir):
+            os.makedirs(workdir)
+        self.workdir = workdir
+        self._jobs = None
+
+    def submit(
+            self, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        """Submit a job.
+
+        Parameters
+        ----------
+        args : list
+            The command and arguments to execute.
+        output_filename : str
+            File to write process output to.
+        name : str, optional
+            Name of job.
+        depends_on : list of int, optional
+            IDs of jobs that need to finish first before the submitted job can
+            be started.
+        scheduler_args : dict, optional
+            Additional arguments for the scheduler.
+
+        Returns
+        -------
+        str
+            Job ID
+        """
+        if scheduler_args is None:
+            scheduler_args = dict()
+        else:
+            scheduler_args = {k: v(name) if callable(v) else v
+                              for k, v in scheduler_args.items()}
+
+        # Checking whether jobs depending on are completed before submitting
+        # the new job is a race condition, but I see no possibility to avoid
+        # it.
+        if depends_on is not None:
+            statii = [self.get_status(x) for x in depends_on]
+            depends_on = [x for x, s in zip(depends_on, statii)
+                          if s is not None and s.status != 'D']
+
+        scheduler_args.update({
+            'output_file': output_filename,
+            'name': name,
+        })
+        if len(depends_on) > 0:
+            scheduler_args['depends_on'] = depends_on
+        out = subprocess.check_output(
+            ['sbatch'] + self.build_args(**scheduler_args) + args)
+        return out.split(None)[-1]
+
+    def kill(self, jobid):
+        """Kill a job.
+
+        Parameters
+        ----------
+        jobid : str
+            Job to kill.
+        """
+        subprocess.check_call(['scancel', str(jobid)])
+
+    def get_status(self, jobid=None):
+        """Get the status of a job.
+
+        Parameters
+        ----------
+        jobid : str
+            Job to request status of.
+
+        Returns
+        -------
+        namedtuple or None
+            Returns a tuple with *(id, status, name)* wherein status can be
+
+            - ``'R'`` for a running job
+            - ``'Q'`` for a queued job
+            - ``'*Q'`` for a queued job waiting on another job to finish
+            - ``'Z'`` for a sleeping job
+            - ``'D'`` for a completed job
+
+            If no status data is available for the job ID, None will be
+            returned.
+        """
+        if self._jobs is None:
+            self.refresh_job_info()
+        elif jobid not in self._jobs:
+            try:
+                stdout = subprocess.check_output(
+                    ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j',
+                     '-j', str(jobid)],
+                    stderr=subprocess.STDOUT, universal_newlines=True)
+                for line in stdout.split('\n'):
+                    cols = line.split(None, 3)
+                    if len(cols) > 2 and int(cols[0]) == jobid:
+                        self._jobs[jobid] = JobStatus(
+                            jobid, self.STATUS_MAP[cols[1]], cols[-1])
+            except subprocess.CalledProcessError as err:
+                # 1 if none pending, running, or suspended
+                if err.returncode != 1:
+                    raise
+        return self._jobs.get(jobid, None)
+
+    def get_jobs(self):
+        """Get all queued and running jobs.
+
+        Returns
+        -------
+        list of str
+            Job IDs
+        """
+        if self._jobs is None:
+            self.refresh_job_info()
+        return self._jobs.keys()
+
+    def refresh_job_info(self):
+        self._jobs = {}
+        stdout = subprocess.check_output(
+            ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j'],
+            universal_newlines=True)
+        for line in stdout.split('\n'):
+            cols = line.split(None, 3)
+            if len(cols) > 2 and cols[1] in ['PD', 'R', 'CF', 'CG']:
+                jobid = cols[0]
+                self._jobs[jobid] = JobStatus(jobid, self.STATUS_MAP[cols[1]],
+                                              cols[-1])
