@@ -39,7 +39,7 @@ class JobSourceFile(object):
 
     @property
     def full_code(self):
-        return '''
+        return '''#!{python}
 try:
     import faulthandler
     faulthandler.enable()
@@ -59,6 +59,7 @@ from psyrun.tasks import TaskDef
 task = TaskDef({taskpath!r})
 {code}
         '''.format(
+            python=self.task.python,
             path=sys.path,
             taskdir=os.path.abspath(os.path.dirname(self.task.path)),
             taskpath=os.path.abspath(self.task.path), code=self.job_code)
