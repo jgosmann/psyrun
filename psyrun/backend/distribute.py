@@ -4,7 +4,7 @@ import os
 import shutil
 
 from psyrun.backend.base import Backend, JobSourceFile
-from psyrun.jobs import Job, JobChain, JobGroup
+from psyrun.jobs import Job, JobChain, JobArray
 from psyrun.pspace import dict_concat, missing, Param
 from psyrun.mapper import map_pspace_hdd_backed
 from psyrun.store import DefaultStore
@@ -109,16 +109,12 @@ execute = task.execute
 Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2])
             ''')
 
-        jobs = []
-        for i, (infile, outfile) in enumerate(
-                splitter.iter_in_out_files()):
-            jobs.append(Job(
-                str(i), self.submit_file,
-                {'job_source_file': source_file, 'args': [infile, outfile]},
-                [infile], [outfile]))
-
-        group = JobGroup('process', jobs)
-        return group
+        infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
+        outfile = os.path.join(splitter.outdir, '%a' + splitter.store.ext)
+        return JobArray(
+            splitter.n_splits, 'process', self.submit_file,
+            {'job_source_file': source_file, 'args': [infile, outfile]},
+            [infile], [outfile])
 
     def create_merge_job(self, splitter):
         code = '''
