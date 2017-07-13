@@ -6,6 +6,7 @@ import os
 import os.path
 import re
 import subprocess
+import sys
 
 
 JobStatus = namedtuple('JobStatus', ['id', 'status', 'name'])
@@ -359,7 +360,8 @@ class Slurm(Scheduler):
         'depends_on': _ShortOption(
             '-d', lambda jobids: 'afterok:' + ':'.join(
                 str(x) for x in jobids)),
-        'name': _ShortOption('-J')
+        'name': _ShortOption('-J'),
+        'array': _LongOption('--array'),
     }
 
     STATUS_MAP = {
@@ -414,6 +416,42 @@ class Slurm(Scheduler):
         str
             Job ID
         """
+        out = subprocess.check_output(self._prepare_submisson_cmd(
+            args, output_filename, name, scheduler_args, depends_on))
+        return out.split(None)[-1]
+
+    def submit_array(
+            self, n, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        if scheduler_args is None:
+            scheduler_args = dict()
+        else:
+            scheduler_args = dict(scheduler_args)
+
+        scheduler_args['array'] = '0-' + str(n - 1)
+
+        code = '''#!{python}
+import os
+import subprocess
+import sys
+
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+
+sys.exit(subprocess.call([a.replace(a, '%a', str(task_id)) for a in {args!r}])
+'''.format(python=sys.executable, args=args)
+
+        cmd = self._prepare_submisson_cmd(
+            args, output_filename, name, scheduler_args, depends_on)
+        p = subprocess.Popen(
+            cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        out, _ = p.communicate(code)
+        if p.returncode != 0:
+            raise subprocess.CalledProcessError(p.returncode, cmd, out)
+        return out.split(None)[-1]
+
+    def _prepare_submisson_cmd(
+            self, args, output_filename, name=None, scheduler_args=None,
+            depends_on=None):
         if scheduler_args is None:
             scheduler_args = dict()
         else:
@@ -434,9 +472,7 @@ class Slurm(Scheduler):
         })
         if len(depends_on) > 0:
             scheduler_args['depends_on'] = depends_on
-        out = subprocess.check_output(
-            ['sbatch'] + self.build_args(**scheduler_args) + args)
-        return out.split(None)[-1]
+        return ['sbatch'] + self.build_args(**scheduler_args) + args
 
     def kill(self, jobid):
         """Kill a job.
