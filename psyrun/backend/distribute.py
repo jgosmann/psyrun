@@ -112,7 +112,7 @@ Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2])
         infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
         outfile = os.path.join(splitter.outdir, '%a' + splitter.store.ext)
         return JobArray(
-            splitter.n_splits, 'process', self.submit_file,
+            splitter.n_splits, 'process', self.submit_array, self.submit_file,
             {'job_source_file': source_file, 'args': [infile, outfile]},
             [infile], [outfile])
 

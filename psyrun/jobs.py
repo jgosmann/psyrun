@@ -51,11 +51,12 @@ class Job(object):
 
 class JobArray(object):
     def __init__(
-            self, n, name, submit_fn, submit_kwargs, dependency_patterns,
-            target_patterns):
+            self, n, name, submit_fn, single_submit_fn, submit_kwargs,
+            dependency_patterns, target_patterns):
         self.n = n
         self.name = name
         self.submit_fn = submit_fn
+        self.single_submit_fn = single_submit_fn
         self.submit_kwargs = submit_kwargs
         self.dependency_patterns = dependency_patterns
         self.target_patterns = target_patterns
@@ -69,7 +70,8 @@ class JobArray(object):
             submit_kwargs['args'] = [
                 a.replace('%a', str(i)) for a in self.submit_kwargs['args']]
             self.jobs.append(Job(
-                str(i), self.submit_fn, submit_kwargs, dependencies, targets))
+                str(i), self.single_submit_fn, submit_kwargs, dependencies,
+                targets))
 
     @property
     def dependencies(self):
@@ -230,6 +232,20 @@ class Submit(JobTreeVisitor):
             return [job.submit_fn(
                 name=self.names[job], depends_on=self._depends_on,
                 **job.submit_kwargs)]
+
+    def visit_array(self, job):
+        if self.uptodate.status[job]:
+            print('-', self.names[job])
+            return []
+        else:
+            print('.', self.names[job])
+            try:
+                return [job.submit_fn(
+                    job.n, name=self.names[job], depends_on=self._depends_on,
+                    **job.submit_kwargs)]
+            except NotImplementedError:
+                return self.visit_group(job)
+
 
     def visit_group(self, group):
         return sum((self.visit(job) for job in group.jobs), [])

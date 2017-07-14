@@ -142,7 +142,45 @@ class Backend(object):
         if args is None:
             args = []
 
+        self._prepare_job_submission(job_source_file, name)
+
         output_filename = os.path.join(self.workdir, name + '.log')
+        return self.task.scheduler.submit(
+            [job_source_file.path] + args, output_filename,
+            name, depends_on, self.task.scheduler_args)
+
+    def submit_array(
+            self, n, job_source_file, name, depends_on=None, args=None):
+        """Submits a source file to execute to the task scheduler.
+
+        Parameters
+        ----------
+        job_source_file : `JobSourceFile`
+            Source file to execute in job.
+        name: str
+            Job name.
+        depends_on: sequence
+            Job IDs that have to finish before the submitted code can be
+            executed.
+        args : sequence
+            Additional arguments to pass to the job.
+
+        Returns
+        -------
+        dict
+            Contains the id of the submitted job under the key ``'id'``.
+        """
+        if args is None:
+            args = []
+
+        self._prepare_job_submission(job_source_file, name)
+
+        output_filename = os.path.join(self.workdir, name + '.log')
+        return self.task.scheduler.submit_array(
+            n, [job_source_file.path] + args, output_filename,
+            name, depends_on, self.task.scheduler_args)
+
+    def _prepare_job_submission(self, job_source_file, name):
         if not job_source_file.written:
             job_source_file.write()
 
@@ -150,10 +188,6 @@ class Backend(object):
             status = self.task.scheduler.get_status(job)
             if status is not None and name == status.name:
                 self.task.scheduler.kill(job)
-
-        return self.task.scheduler.submit(
-            [job_source_file.path] + args, output_filename,
-            name, depends_on, self.task.scheduler_args)
 
     def create_job(self, cont=False):
         """Create the job tree to process given task.

@@ -42,6 +42,38 @@ class Scheduler(object):
         """
         raise NotImplementedError()
 
+    def submit_array(
+            self, n, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        """Submit a job array.
+
+        If the scheduler does not support job arrays, this method should raise
+        `NotImplementedError`.
+
+        Parameters
+        ----------
+        n : int
+            Number of tasks to submit.
+        args : sequence
+            The command and arguments to execute. The string ``'%a'`` will be
+            replaced with the task number in each argument.
+        output_filename : str
+            File to write process output to. The string ``'%a'`` will be
+            replaced by the task number.
+        name : str, optional
+            Name of job.
+        depends_on : sequence of int, optional
+            IDs of jobs that need to finish first before the submitted job can
+            be started.
+        scheduler_args : dict, optional
+            Additional arguments for the scheduler.
+
+        Returns
+        -------
+        Job ID
+        """
+        raise NotImplementedError()
+
     def kill(self, jobid):
         """Kill a job.
 
@@ -128,6 +160,11 @@ class ImmediateRun(Scheduler):
             if subprocess.call(args, stdout=f, stderr=subprocess.STDOUT) != 0:
                 self._failed_jobs.append(self._cur_id)
         return self._cur_id
+
+    def submit_array(
+            self, n, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        raise NotImplementedError("Job arrays not supported.")
 
     def kill(self, jobid):
         """Has no effect."""
@@ -247,6 +284,11 @@ class Sqsub(Scheduler):
             ['sqsub'] + self.build_args(**scheduler_args) + args)
         with open(self.idfile, 'r') as f:
             return int(f.read())
+
+    def submit_array(
+            self, n, args, output_filename, name=None, depends_on=None,
+            scheduler_args=None):
+        raise NotImplementedError("Job arrays not supported.")
 
     def kill(self, jobid):
         """Kill a job.
