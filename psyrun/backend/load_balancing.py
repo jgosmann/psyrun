@@ -4,7 +4,7 @@ import fcntl
 import os
 
 from psyrun.backend.base import Backend, JobSourceFile
-from psyrun.jobs import Job, JobChain, JobGroup
+from psyrun.jobs import Job, JobArray, JobChain
 from psyrun.mapper import map_pspace
 from psyrun.pspace import missing, Param
 from psyrun.store import DefaultStore
@@ -92,18 +92,11 @@ LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store).start(
     task.execute)
             ''')
 
-        jobs = []
-        for i in range(self.task.max_jobs):
-            jobs.append(Job(
-                str(i), self.submit_file,
-                {'job_source_file': source_file, 'args': [
-                    self.infile,
-                    self.partial_resultfile,
-                    self.statusfile
-                ]}, [self.infile], [self.partial_resultfile]))
-
-        group = JobGroup('process', jobs)
-        return group
+        return JobArray(
+            self.task.max_jobs, 'process', self.submit_array, self.submit_file,
+            {'job_source_file': source_file, 'args': [
+                self.infile, self.partial_resultfile, self.statusfile
+            ]}, [self.infile], [self.partial_resultfile])
 
     def create_finalize_job(self):
         code = '''
