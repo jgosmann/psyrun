@@ -116,7 +116,7 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     """
 
     __slots__ = [
-        'backend', 'file_dep', 'max_jobs', 'min_items', 'pspace',
+        'backend', 'file_dep', 'max_jobs', 'min_items', 'pool_size', 'pspace',
         'overwrite_dirty', 'python', 'resultfile', 'scheduler',
         'scheduler_args', 'store', 'workdir']
 
@@ -126,6 +126,7 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
         self.max_jobs = 100
         self.min_items = 1
         self.overwrite_dirty = True
+        self.pool_size = 1
         self.pspace = Param()
         self.python = sys.executable
         self.resultfile = None

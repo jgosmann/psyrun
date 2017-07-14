@@ -86,11 +86,20 @@ LoadBalancingWorker.create_statusfile({statusfile!r})
             os.path.join(self.workdir, self.task.name + ':process.py'),
             self.task,
             '''
+from multiprocessing import Process
 import sys
 from psyrun.backend.load_balancing import LoadBalancingWorker
-LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store).start(
-    task.execute)
-            ''')
+if __name__ == '__main__':
+    workers = [
+        LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store)
+        for _ in range({pool_size})]
+    processes = [Process(target=w.start, args=(task.execute,))
+                 for w in workers]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+            '''.format(pool_size=self.task.pool_size))
 
         return JobArray(
             self.task.max_jobs, 'process', self.submit_array, self.submit_file,

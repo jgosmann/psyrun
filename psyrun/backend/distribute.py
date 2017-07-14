@@ -105,9 +105,14 @@ Splitter(
             '''
 import sys
 from psyrun.backend.distribute import Worker
-execute = task.execute
-Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2])
-            ''')
+
+def execute(*args, **kwargs):
+    return task.execute(*args, **kwargs)
+
+if __name__ == '__main__':
+    Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2],
+           pool_size={pool_size})
+            '''.format(pool_size=self.task.pool_size))
 
         infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
         outfile = os.path.join(splitter.outdir, '%a' + splitter.store.ext)
@@ -331,7 +336,7 @@ class Worker(object):
     def __init__(self, store=DefaultStore()):
         self.store = store
 
-    def start(self, fn, infile, outfile):
+    def start(self, fn, infile, outfile, pool_size=1):
         """Start processing a parameter space.
 
         Parameters
@@ -347,5 +352,5 @@ class Worker(object):
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
             fn, pspace, out_root + '.part' + out_ext, store=self.store,
-            return_data=False)
+            return_data=False, pool_size=pool_size)
         os.rename(out_root + '.part' + out_ext, outfile)
