@@ -175,7 +175,7 @@ class Backend(object):
 
         self._prepare_job_submission(job_source_file, name)
 
-        output_filename = os.path.join(self.workdir, name + '.log')
+        output_filename = os.path.join(self.workdir, name + ':%a.log')
         return self.task.scheduler.submit_array(
             n, [job_source_file.path] + args, output_filename,
             name, depends_on, self.task.scheduler_args)
