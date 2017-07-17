@@ -460,6 +460,7 @@ class Slurm(Scheduler):
         """
         out = subprocess.check_output(self._prepare_submisson_cmd(
             args, output_filename, name, scheduler_args, depends_on))
+        out = out.decode('utf-8')
         return out.split(None)[-1]
 
     def submit_array(
@@ -478,15 +479,15 @@ import subprocess
 import sys
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
-
-sys.exit(subprocess.call([a.replace(a, '%a', str(task_id)) for a in {args!r}])
+sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
 '''.format(python=sys.executable, args=args)
 
         cmd = self._prepare_submisson_cmd(
-            args, output_filename, name, scheduler_args, depends_on)
+            [], output_filename, name, scheduler_args, depends_on)
         p = subprocess.Popen(
             cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, _ = p.communicate(code)
+        out, _ = p.communicate(code.encode('utf-8'))
+        out = out.decode('utf-8')
         if p.returncode != 0:
             raise subprocess.CalledProcessError(p.returncode, cmd, out)
         return out.split(None)[-1]
