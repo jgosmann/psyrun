@@ -368,8 +368,6 @@ class Slurm(Scheduler):
 
     USER_DEFAULT_ARGS = {
         'timelimit': '1h',
-        'n_cpus': 1,
-        'n_nodes': 1,
         'memory': '1G',
     }
 
