@@ -396,9 +396,12 @@ class Slurm(Scheduler):
     KNOWN_ARGS = {
         'timelimit': _ShortOption('-t'),
         'output_file': _ShortOption('-o'),
+        'cores-per-socket': _LongOption('--cores-per-socket'),
+        'sockets-per-node': _LongOption('--sockets-per-node'),
         'n_cpus': _ShortOption('-c'),
         'n_nodes': _ShortOption('-N'),
-        'memory': _LongOption('--mem-per-cpu'),
+        'memory': _LongOption('--mem'),
+        'memory_per_cpu': _LongOption('--mem-per-cpu'),
         'depends_on': _ShortOption(
             '-d', lambda jobids: 'afterok:' + ':'.join(
                 str(x) for x in jobids)),
