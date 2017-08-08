@@ -553,20 +553,24 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
         if self._jobs is None:
             self.refresh_job_info()
         elif jobid not in self._jobs:
-            try:
-                stdout = subprocess.check_output(
-                    ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j',
-                     '-j', str(jobid)],
-                    stderr=subprocess.STDOUT, universal_newlines=True)
-                for line in stdout.split('\n'):
-                    cols = line.split(None, 3)
-                    if len(cols) > 2 and int(cols[0]) == jobid:
+            stdout = subprocess.check_output(
+                ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j',
+                 '-j', str(jobid)],
+                stderr=subprocess.STDOUT, universal_newlines=True)
+            for line in stdout.split('\n'):
+                cols = line.split(None, 3)
+                if len(cols) > 2 and cols[1] in ['PD', 'R', 'CF', 'CG']:
+                    jobid = cols[0]
+                    m = re.match(r'^(\d+)_\[(\d+)-(\d+)\]$', jobid)
+                    if m:
+                        for i in range(int(m.group(2)), int(m.group(3)) + 1):
+                            sub_id = m.group(1) + '_' + str(i)
+                            self._jobs[sub_id] = JobStatus(
+                                sub_id, self.STATUS_MAP[cols[1]],
+                                cols[-1] + ':' + str(i))
+                    else:
                         self._jobs[jobid] = JobStatus(
                             jobid, self.STATUS_MAP[cols[1]], cols[-1])
-            except subprocess.CalledProcessError as err:
-                # 1 if none pending, running, or suspended
-                if err.returncode != 1:
-                    raise
         return self._jobs.get(jobid, None)
 
     def get_jobs(self):
