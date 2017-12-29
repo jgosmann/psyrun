@@ -554,23 +554,24 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
             self.refresh_job_info()
         elif jobid not in self._jobs:
             stdout = subprocess.check_output(
-                ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j',
+                ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j %r',
                  '-j', str(jobid)],
                 stderr=subprocess.STDOUT, universal_newlines=True)
             for line in stdout.split('\n'):
-                cols = line.split(None, 3)
-                if len(cols) > 2 and cols[1] in ['PD', 'R', 'CF', 'CG']:
+                cols = line.split(None, 4)
+                if len(cols) > 3 and cols[1] in ['PD', 'R', 'CF', 'CG']:
                     jobid = cols[0]
+                    status = self.STATUS_MAP[cols[1]]
+                    if status == 'Q' and cols[3] == 'Dependency':
+                        status = '*Q'
                     m = re.match(r'^(\d+)_\[(\d+)-(\d+)\]$', jobid)
                     if m:
                         for i in range(int(m.group(2)), int(m.group(3)) + 1):
                             sub_id = m.group(1) + '_' + str(i)
                             self._jobs[sub_id] = JobStatus(
-                                sub_id, self.STATUS_MAP[cols[1]],
-                                cols[-1] + ':' + str(i))
+                                sub_id, status, cols[-1] + ':' + str(i))
                     else:
-                        self._jobs[jobid] = JobStatus(
-                            jobid, self.STATUS_MAP[cols[1]], cols[-1])
+                        self._jobs[jobid] = JobStatus(jobid, status, cols[-1])
         return self._jobs.get(jobid, None)
 
     def get_jobs(self):
@@ -588,19 +589,20 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
     def refresh_job_info(self):
         self._jobs = {}
         stdout = subprocess.check_output(
-            ['squeue', '-u', getpass.getuser(), '-h', '-o', '%i %t %j'],
+            ['squeue', '-u', getpass.getuser(), '-h', '-o', '%i %t %j %r'],
             universal_newlines=True)
         for line in stdout.split('\n'):
             cols = line.split(None, 3)
-            if len(cols) > 2 and cols[1] in ['PD', 'R', 'CF', 'CG']:
+            if len(cols) > 3 and cols[1] in ['PD', 'R', 'CF', 'CG']:
                 jobid = cols[0]
+                status = self.STATUS_MAP[cols[1]]
+                if status == 'Q' and cols[3] == 'Dependency':
+                    status = '*Q'
                 m = re.match(r'^(\d+)_\[(\d+)-(\d+)\]$', jobid)
                 if m:
                     for i in range(int(m.group(2)), int(m.group(3)) + 1):
                         sub_id = m.group(1) + '_' + str(i)
                         self._jobs[sub_id] = JobStatus(
-                            sub_id, self.STATUS_MAP[cols[1]],
-                            cols[-1] + ':' + str(i))
+                            sub_id, status, cols[-1] + ':' + str(i))
                 else:
-                    self._jobs[jobid] = JobStatus(
-                        jobid, self.STATUS_MAP[cols[1]], cols[-1])
+                    self._jobs[jobid] = JobStatus(jobid, status, cols[-1])
