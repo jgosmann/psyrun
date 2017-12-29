@@ -557,21 +557,7 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
                 ['squeue', '-u', getpass.getuser(), '-h', '-o', '%A %t %j %r',
                  '-j', str(jobid)],
                 stderr=subprocess.STDOUT, universal_newlines=True)
-            for line in stdout.split('\n'):
-                cols = line.split(None, 4)
-                if len(cols) > 3 and cols[1] in ['PD', 'R', 'CF', 'CG']:
-                    jobid = cols[0]
-                    status = self.STATUS_MAP[cols[1]]
-                    if status == 'Q' and cols[3] == 'Dependency':
-                        status = '*Q'
-                    m = re.match(r'^(\d+)_\[(\d+)-(\d+)\]$', jobid)
-                    if m:
-                        for i in range(int(m.group(2)), int(m.group(3)) + 1):
-                            sub_id = m.group(1) + '_' + str(i)
-                            self._jobs[sub_id] = JobStatus(
-                                sub_id, status, cols[-1] + ':' + str(i))
-                    else:
-                        self._jobs[jobid] = JobStatus(jobid, status, cols[-1])
+            self._update_jobs(stdout)
         return self._jobs.get(jobid, None)
 
     def get_jobs(self):
@@ -591,8 +577,11 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
         stdout = subprocess.check_output(
             ['squeue', '-u', getpass.getuser(), '-h', '-o', '%i %t %j %r'],
             universal_newlines=True)
-        for line in stdout.split('\n'):
-            cols = line.split(None, 3)
+        self._update_jobs(stdout)
+
+    def _update_jobs(self, squeue_out):
+        for line in squeue_out.split('\n'):
+            cols = line.split(None, 4)
             if len(cols) > 3 and cols[1] in ['PD', 'R', 'CF', 'CG']:
                 jobid = cols[0]
                 status = self.STATUS_MAP[cols[1]]
