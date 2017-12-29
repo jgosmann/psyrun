@@ -179,7 +179,37 @@ class ImmediateRun(Scheduler):
         return []
 
 
-class Sqsub(Scheduler):
+class ExternalScheduler(Scheduler):
+    class Option(object):
+        def __init__(self, name, conversion=str):
+            self.name = name
+            self.conversion = conversion
+
+        def build(self, value):
+            raise NotImplementedError()
+
+    class ShortOption(Option):
+        def build(self, value):
+            if value is None:
+                return []
+            return [self.name, self.conversion(value)]
+
+    class LongOption(Option):
+        def build(self, value):
+            if value is None:
+                return []
+            return [self.name + '=' + self.conversion(value)]
+
+    KNOWN_ARGS = {}
+
+    def build_args(self, **kwargs):
+        args = []
+        for k, v in kwargs.items():
+            args.extend(self.KNOWN_ARGS[k].build(v))
+        return args
+
+
+class Sqsub(ExternalScheduler):
     """sqsub (sharcnet) scheduler."""
 
     USER_DEFAULT_ARGS = {
@@ -189,45 +219,21 @@ class Sqsub(Scheduler):
         'memory': '1G',
     }
 
-    class _Option(object):
-        def __init__(self, name, conversion=str):
-            self.name = name
-            self.conversion = conversion
-
-        def build(self, value):
-            raise NotImplementedError()
-
-    class _ShortOption(_Option):
-        def build(self, value):
-            if value is None:
-                return []
-            return [self.name, self.conversion(value)]
-
-    class _LongOption(_Option):
-        def build(self, value):
-            if value is None:
-                return []
-            return [self.name + '=' + self.conversion(value)]
-
     KNOWN_ARGS = {
-        'timelimit': _ShortOption('-r'),
-        'output_file': _ShortOption('-o'),
-        'n_cpus': _ShortOption('-n'),
-        'n_nodes': _ShortOption('-N'),
-        'memory': _LongOption('--mpp'),
-        'depends_on': _ShortOption(
+        'timelimit': ExternalScheduler.ShortOption('-r'),
+        'output_file': ExternalScheduler.ShortOption('-o'),
+        'n_cpus': ExternalScheduler.ShortOption('-n'),
+        'n_nodes': ExternalScheduler.ShortOption('-N'),
+        'memory': ExternalScheduler.LongOption('--mpp'),
+        'depends_on': ExternalScheduler.ShortOption(
             '-w', lambda jobids: ','.join(str(x) for x in jobids)),
-        'idfile': _LongOption('--idfile'),
-        'name': _ShortOption('-j')
+        'idfile': ExternalScheduler.LongOption('--idfile'),
+        'name': ExternalScheduler.ShortOption('-j')
     }
 
-    def build_args(self, **kwargs):
-        args = []
-        for k, v in kwargs.items():
-            args.extend(self.KNOWN_ARGS[k].build(v))
-        return args
-
     def __init__(self, workdir=None):
+        super(Sqsub, self).__init__()
+
         if workdir is None:
             workdir = '/work/{user}/psyrun'.format(user=os.environ['USER'])
         if not os.path.exists(workdir):
@@ -363,7 +369,7 @@ class Sqsub(Scheduler):
                 self._jobs[jobid] = JobStatus(jobid, cols[2], cols[-1])
 
 
-class Slurm(Scheduler):
+class Slurm(ExternalScheduler):
     """Slurm (sbatch) scheduler."""
 
     USER_DEFAULT_ARGS = {
@@ -371,40 +377,20 @@ class Slurm(Scheduler):
         'memory': '1G',
     }
 
-    class _Option(object):
-        def __init__(self, name, conversion=str):
-            self.name = name
-            self.conversion = conversion
-
-        def build(self, value):
-            raise NotImplementedError()
-
-    class _ShortOption(_Option):
-        def build(self, value):
-            if value is None:
-                return []
-            return [self.name, self.conversion(value)]
-
-    class _LongOption(_Option):
-        def build(self, value):
-            if value is None:
-                return []
-            return [self.name + '=' + self.conversion(value)]
-
     KNOWN_ARGS = {
-        'timelimit': _ShortOption('-t'),
-        'output_file': _ShortOption('-o'),
-        'cores-per-socket': _LongOption('--cores-per-socket'),
-        'sockets-per-node': _LongOption('--sockets-per-node'),
-        'n_cpus': _ShortOption('-c'),
-        'n_nodes': _ShortOption('-N'),
-        'memory': _LongOption('--mem'),
-        'memory_per_cpu': _LongOption('--mem-per-cpu'),
-        'depends_on': _ShortOption(
+        'timelimit': ExternalScheduler.ShortOption('-t'),
+        'output_file': ExternalScheduler.ShortOption('-o'),
+        'cores-per-socket': ExternalScheduler.LongOption('--cores-per-socket'),
+        'sockets-per-node': ExternalScheduler.LongOption('--sockets-per-node'),
+        'n_cpus': ExternalScheduler.ShortOption('-c'),
+        'n_nodes': ExternalScheduler.ShortOption('-N'),
+        'memory': ExternalScheduler.LongOption('--mem'),
+        'memory_per_cpu': ExternalScheduler.LongOption('--mem-per-cpu'),
+        'depends_on': ExternalScheduler.ShortOption(
             '-d', lambda jobids: 'afterok:' + ':'.join(
                 str(x) for x in jobids)),
-        'name': _ShortOption('-J'),
-        'array': _LongOption('--array'),
+        'name': ExternalScheduler.ShortOption('-J'),
+        'array': ExternalScheduler.LongOption('--array'),
     }
 
     STATUS_MAP = {
@@ -421,13 +407,8 @@ class Slurm(Scheduler):
         'SE': 'D',
     }
 
-    def build_args(self, **kwargs):
-        args = []
-        for k, v in kwargs.items():
-            args.extend(self.KNOWN_ARGS[k].build(v))
-        return args
-
     def __init__(self, workdir=None):
+        super(Slurm, self).__init__()
         if workdir is None:
             workdir = '/project/{user}/psyrun'.format(user=os.environ['USER'])
         if not os.path.exists(workdir):
