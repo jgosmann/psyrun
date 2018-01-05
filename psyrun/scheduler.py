@@ -495,7 +495,7 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
             'output_file': output_filename,
             'name': name,
         })
-        if len(depends_on) > 0:
+        if depends_on is not None and len(depends_on) > 0:
             scheduler_args['depends_on'] = depends_on
         return ['sbatch'] + self.build_args(**scheduler_args) + args
 
@@ -573,6 +573,6 @@ sys.exit(subprocess.call([a.replace('%a', str(task_id)) for a in {args!r}]))
                     for i in range(int(m.group(2)), int(m.group(3)) + 1):
                         sub_id = m.group(1) + '_' + str(i)
                         self._jobs[sub_id] = JobStatus(
-                            sub_id, status, cols[-1] + ':' + str(i))
+                            sub_id, status, cols[2] + ':' + str(i))
                 else:
-                    self._jobs[jobid] = JobStatus(jobid, status, cols[-1])
+                    self._jobs[jobid] = JobStatus(jobid, status, cols[2])
