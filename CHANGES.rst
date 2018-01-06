@@ -2,6 +2,15 @@ Changes
 =======
 
 
+0.7.0
+-----
+
+New features
+^^^^^^^^^^^^
+
+* Added support for the Slurm Workload Manager.
+
+
 0.6.0
 -----
 
