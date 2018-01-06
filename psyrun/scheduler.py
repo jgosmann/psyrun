@@ -48,7 +48,7 @@ class Scheduler(object):
         """Submit a job array.
 
         If the scheduler does not support job arrays, this method should raise
-        `NotImplementedError`.
+        *NotImplementedError*.
 
         Parameters
         ----------
