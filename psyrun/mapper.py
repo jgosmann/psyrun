@@ -1,5 +1,6 @@
 """Map functions onto parameter spaces."""
 
+from multiprocessing import Pool
 import os.path
 
 from psyrun.pspace import dict_concat, missing, Param
@@ -37,6 +38,10 @@ def get_result(fn, params):
     return result
 
 
+def _get_result_single_arg(args):
+    return get_result(*args)
+
+
 def map_pspace(fn, pspace):
     """Maps a function to parameter space values.
 
@@ -66,7 +71,8 @@ def map_pspace(fn, pspace):
     return dict_concat(list(get_result(fn, p) for p in pspace.iterate()))
 
 
-def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
+def map_pspace_hdd_backed(
+        fn, pspace, filename, store, return_data=True, pool_size=1):
     """Maps a function to parameter space values while storing produced data.
 
     Data is stored progressively. Thus, if the program crashes, not all data
@@ -94,8 +100,11 @@ def map_pspace_hdd_backed(fn, pspace, filename, store, return_data=True):
     """
     if os.path.exists(filename):
         pspace = missing(pspace, Param(**store.load(filename)))
-    for p in pspace.iterate():
-        store.append(filename, dict_concat((get_result(fn, p),)))
+    chunksize = max(1, len(pspace) // pool_size)
+    for r in Pool(pool_size).imap_unordered(
+            _get_result_single_arg,
+            ((fn, p) for p in pspace.iterate()), chunksize):
+        store.append(filename, dict_concat((r,)))
     if not os.path.exists(filename):
         store.save(filename, {})
     if return_data:

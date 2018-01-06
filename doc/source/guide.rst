@@ -372,9 +372,41 @@ Schedulers
 
 Schedulers define how Psyrun submits individual jobs. The default is
 `ImmediateRun` which is not really a scheduler because it just immediately runs
-any job on submission. Psyrun comes with support for Sharcnet's ``sqsub`` with
-the `Sqsub` scheduler. For other schedulers it is necessary
-to write some custom code.
+any job on submission. Psyrun comes with support for
+`Slurm Workload Manager <https://slurm.schedmd.com/>`_ (used by `Compute Canada
+<http://computecanada.ca/>`_'s new clusters and Sharcnet's ``sqsub`` scheduler.
+For other schedulers it is necessary to write some custom code.
+
+
+Slurm scheduler (e.g., Compute Canada)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `Slurm` scheduler uses ``sbatch`` to submit jobs. It accepts the following
+*scheduler_args* (corresponding ``sbatch`` command line options are given in
+parenthesis):
+
+* *timelimit* (``-t``): String stating the execution time limit for
+  each individual job.
+* *memory* (``--mem``): String stating the memory limit per node.
+* *memory_per_cpu* (``--mem-per-cpu``): String stating the minimum memory
+  required per CPU.
+* *n_cpus* (``-c``): Number of CPU cores to allocate for each task.
+* *n_nodes* (``-N``): Number of nodes to allocate for each individual
+  job.
+* *cores-per-socket* (``--cores-per-socket``): Minimum number of cores per
+  socket.
+* *sockets-per-node* (``--sockets-per-node``): Minimum number of sockets per
+  node.
+
+For more details see `the sbatch help <https://slurm.schedmd.com/sbatch.html>`_.
+Not all options that can be passed to ``sbatch`` are currently supported.
+Please `open a new issue <https://github.com/jgosmann/psyrun/issues/new>`_ if
+you require support for further options.
+
+Instead of a fixed value, you can also assign a function accepting the job
+name as single argument to `Slurm` scheduler arguments. The function will be
+called with the job name to determine the value of the argument.
+
 
 Sqsub scheduler (Sharcnet)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -4,7 +4,7 @@ import os
 import shutil
 
 from psyrun.backend.base import Backend, JobSourceFile
-from psyrun.jobs import Job, JobChain, JobGroup
+from psyrun.jobs import Job, JobChain, JobArray
 from psyrun.pspace import dict_concat, missing, Param
 from psyrun.mapper import map_pspace_hdd_backed
 from psyrun.store import DefaultStore
@@ -105,20 +105,21 @@ Splitter(
             '''
 import sys
 from psyrun.backend.distribute import Worker
-execute = task.execute
-Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2])
-            ''')
 
-        jobs = []
-        for i, (infile, outfile) in enumerate(
-                splitter.iter_in_out_files()):
-            jobs.append(Job(
-                str(i), self.submit_file,
-                {'job_source_file': source_file, 'args': [infile, outfile]},
-                [infile], [outfile]))
+def execute(*args, **kwargs):
+    return task.execute(*args, **kwargs)
 
-        group = JobGroup('process', jobs)
-        return group
+if __name__ == '__main__':
+    Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2],
+           pool_size={pool_size})
+            '''.format(pool_size=self.task.pool_size))
+
+        infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
+        outfile = os.path.join(splitter.outdir, '%a' + splitter.store.ext)
+        return JobArray(
+            splitter.n_splits, 'process', self.submit_array, self.submit_file,
+            {'job_source_file': source_file, 'args': [infile, outfile]},
+            [infile], [outfile])
 
     def create_merge_job(self, splitter):
         code = '''
@@ -335,7 +336,7 @@ class Worker(object):
     def __init__(self, store=DefaultStore()):
         self.store = store
 
-    def start(self, fn, infile, outfile):
+    def start(self, fn, infile, outfile, pool_size=1):
         """Start processing a parameter space.
 
         Parameters
@@ -351,5 +352,5 @@ class Worker(object):
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
             fn, pspace, out_root + '.part' + out_ext, store=self.store,
-            return_data=False)
+            return_data=False, pool_size=pool_size)
         os.rename(out_root + '.part' + out_ext, outfile)

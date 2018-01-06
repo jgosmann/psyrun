@@ -4,7 +4,7 @@ import fcntl
 import os
 
 from psyrun.backend.base import Backend, JobSourceFile
-from psyrun.jobs import Job, JobChain, JobGroup
+from psyrun.jobs import Job, JobArray, JobChain
 from psyrun.mapper import map_pspace
 from psyrun.pspace import missing, Param
 from psyrun.store import DefaultStore
@@ -86,24 +86,26 @@ LoadBalancingWorker.create_statusfile({statusfile!r})
             os.path.join(self.workdir, self.task.name + ':process.py'),
             self.task,
             '''
+from multiprocessing import Process
 import sys
 from psyrun.backend.load_balancing import LoadBalancingWorker
-LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store).start(
-    task.execute)
-            ''')
+if __name__ == '__main__':
+    workers = [
+        LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store)
+        for _ in range({pool_size})]
+    processes = [Process(target=w.start, args=(task.execute,))
+                 for w in workers]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+            '''.format(pool_size=self.task.pool_size))
 
-        jobs = []
-        for i in range(self.task.max_jobs):
-            jobs.append(Job(
-                str(i), self.submit_file,
-                {'job_source_file': source_file, 'args': [
-                    self.infile,
-                    self.partial_resultfile,
-                    self.statusfile
-                ]}, [self.infile], [self.partial_resultfile]))
-
-        group = JobGroup('process', jobs)
-        return group
+        return JobArray(
+            self.task.max_jobs, 'process', self.submit_array, self.submit_file,
+            {'job_source_file': source_file, 'args': [
+                self.infile, self.partial_resultfile, self.statusfile
+            ]}, [self.infile], [self.partial_resultfile])
 
     def create_finalize_job(self):
         code = '''

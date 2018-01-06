@@ -49,6 +49,43 @@ class Job(object):
         self.targets = targets
 
 
+class JobArray(object):
+    def __init__(
+            self, n, name, submit_fn, single_submit_fn, submit_kwargs,
+            dependency_patterns, target_patterns):
+        self.n = n
+        self.name = name
+        self.submit_fn = submit_fn
+        self.single_submit_fn = single_submit_fn
+        self.submit_kwargs = submit_kwargs
+        self.dependency_patterns = dependency_patterns
+        self.target_patterns = target_patterns
+
+        self.jobs = []
+        for i in range(self.n):
+            dependencies = [
+                d.replace('%a', str(i)) for d in self.dependency_patterns]
+            targets = [t.replace('%a', str(i)) for t in self.target_patterns]
+            submit_kwargs = dict(self.submit_kwargs)
+            submit_kwargs['args'] = [
+                a.replace('%a', str(i)) for a in self.submit_kwargs['args']]
+            self.jobs.append(Job(
+                str(i), self.single_submit_fn, submit_kwargs, dependencies,
+                targets))
+
+    @property
+    def dependencies(self):
+        for i in range(self.n):
+            for d in self.dependency_patterns:
+                yield d.replace('%a', str(i))
+
+    @property
+    def targets(self):
+        for i in range(self.n):
+            for t in self.target_patterns:
+                yield t.replace('%a', str(i))
+
+
 class JobChain(object):
     """Chain of jobs to run in succession.
 
@@ -134,12 +171,16 @@ class JobTreeVisitor(object):
     def __init__(self):
         self._dispatcher = {
             Job: self.visit_job,
+            JobArray: self.visit_array,
             JobChain: self.visit_chain,
-            JobGroup: self.visit_group
+            JobGroup: self.visit_group,
         }
 
     def visit_job(self, job):
         raise NotImplementedError()
+
+    def visit_array(self, job_array):
+        return self.visit_group(job_array)
 
     def visit_chain(self, chain):
         raise NotImplementedError()
@@ -191,6 +232,20 @@ class Submit(JobTreeVisitor):
             return [job.submit_fn(
                 name=self.names[job], depends_on=self._depends_on,
                 **job.submit_kwargs)]
+
+    def visit_array(self, job):
+        if self.uptodate.status[job]:
+            print('-', self.names[job])
+            return []
+        else:
+            print('.', self.names[job])
+            try:
+                return [job.submit_fn(
+                    job.n, name=self.names[job], depends_on=self._depends_on,
+                    **job.submit_kwargs)]
+            except NotImplementedError:
+                return self.visit_group(job)
+
 
     def visit_group(self, group):
         return sum((self.visit(job) for job in group.jobs), [])
