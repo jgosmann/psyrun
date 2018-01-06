@@ -188,6 +188,10 @@ class ExternalScheduler(Scheduler):
         def build(self, value):
             raise NotImplementedError()
 
+        def __repr__(self):
+            return "<{clsname} '{name}'>".format(
+                clsname=self.__class__.__name__, name=self.name)
+
     class ShortOption(Option):
         def build(self, value):
             if value is None:
