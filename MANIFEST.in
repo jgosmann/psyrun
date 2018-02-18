@@ -3,6 +3,7 @@ include *.ini *.txt
 global-include *.py *.py.template *.rst
 graft doc
 prune doc/build
-prune .*
 prune dist
+prune .*
+global-exclude .*
 global-exclude *.pyc
