@@ -1,3 +1,8 @@
 include LICENSE
-recursive-include . *.rst
+include *.ini *.txt
+global-include *.py *.py.template *.rst
+graft doc
+prune doc/build
 prune .*
+prune dist
+global-exclude *.pyc
