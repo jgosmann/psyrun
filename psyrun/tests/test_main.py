@@ -191,6 +191,7 @@ def test_psyrun_file_dep(taskenv):
     assert sorted(result['y']) == [8]
 
 
+@pytest.mark.filterwarnings(JobsRunningWarning)
 def test_psyrun_does_not_resubmit_queued_jobs(taskenv, scheduler):
     psy_main(['run', '--taskdir', taskenv.taskdir, 'mocked_scheduler'])
     expected = scheduler.joblist
