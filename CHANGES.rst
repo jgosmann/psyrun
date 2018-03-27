@@ -1,6 +1,18 @@
 Changes
 =======
 
+0.8.0 (unreleased)
+------------------
+
+New features
+^^^^^^^^^^^^
+
+* Added the possibility to specify a ``setup`` function in task files that
+  will be executed once at the start of each worker process and can be used
+  to acquire resources and pass them to the processing function for individual
+  parameter sets.
+
+
 
 0.7.1 (April 19, 2018)
 ----------------------

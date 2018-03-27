@@ -7,5 +7,10 @@ max_jobs = 2
 backend = LoadBalancingBackend
 
 
-def execute(x):
-    return {'y': x ** 2}
+def setup(proc_id):
+    assert proc_id in (0, 1)
+    return {'p': 2}
+
+
+def execute(x, p):
+    return {'y': x ** p}

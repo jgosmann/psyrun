@@ -91,9 +91,10 @@ import sys
 from psyrun.backend.load_balancing import LoadBalancingWorker
 if __name__ == '__main__':
     workers = [
-        LoadBalancingWorker(sys.argv[1], sys.argv[2], sys.argv[3], task.store)
-        for _ in range({pool_size})]
-    processes = [Process(target=w.start, args=(task.execute,))
+        LoadBalancingWorker(
+            i, sys.argv[1], sys.argv[2], sys.argv[3], task.store)
+        for i in range({pool_size})]
+    processes = [Process(target=w.start, args=(task.execute, task.setup))
                  for w in workers]
     for p in processes:
         p.start()
@@ -144,6 +145,8 @@ class LoadBalancingWorker(object):
 
     Parameters
     ----------
+    proc_id : int
+        Worker ID.
     infile : str
         Filename of the file with the input parameters space.
     outfile : str
@@ -153,7 +156,9 @@ class LoadBalancingWorker(object):
     store : `Store`, optional
         Input/output backend.
     """
-    def __init__(self, infile, outfile, statusfile, store=DefaultStore()):
+    def __init__(
+            self, proc_id, infile, outfile, statusfile, store=DefaultStore()):
+        self.proc_id = proc_id
         self.infile = infile
         self.outfile = outfile
         self.statusfile = statusfile
@@ -202,7 +207,7 @@ class LoadBalancingWorker(object):
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    def start(self, fn):
+    def start(self, fn, setup_fn=None):
         """Start processing a parameter space.
 
         A status file needs to be created before invoking this function by
@@ -212,11 +217,20 @@ class LoadBalancingWorker(object):
         ----------
         fn : function
             Function to evaluate on the parameter space.
+        setup_fn : function, optional
+            Setup function, called with the worker ID as argument before
+            processing of parameter sets begins. May return a dictionary of
+            parameters added to the invocation of *fn*.
         """
+        add_params = None
+        if setup_fn is not None:
+            add_params = setup_fn(self.proc_id)
+        if add_params is None:
+            add_params = {}
         while True:
             try:
                 pspace = Param(**self.get_next_param_set())
             except IndexError:
                 return
-            data = map_pspace(fn, pspace)
+            data = map_pspace(fn, Param(**add_params) * pspace)
             self.save_data(data)

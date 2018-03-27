@@ -110,15 +110,16 @@ def execute(*args, **kwargs):
     return task.execute(*args, **kwargs)
 
 if __name__ == '__main__':
-    Worker(store=task.store).start(execute, sys.argv[1], sys.argv[2],
-           pool_size={pool_size})
+    Worker(int(sys.argv[3]), store=task.store).start(
+        execute, sys.argv[1], sys.argv[2], pool_size={pool_size},
+        setup_fn=task.setup)
             '''.format(pool_size=self.task.pool_size))
 
         infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
         outfile = os.path.join(splitter.outdir, '%a' + splitter.store.ext)
         return JobArray(
             splitter.n_splits, 'process', self.submit_array, self.submit_file,
-            {'job_source_file': source_file, 'args': [infile, outfile]},
+            {'job_source_file': source_file, 'args': [infile, outfile, '%a']},
             [infile], [outfile])
 
     def create_merge_job(self, splitter):
@@ -324,6 +325,8 @@ class Worker(object):
 
     Parameters
     ----------
+    proc_id : int
+        Worker ID.
     store : `Store`, optional
         Input/output backend.
 
@@ -333,10 +336,11 @@ class Worker(object):
         Input/output backend.
     """
 
-    def __init__(self, store=DefaultStore()):
+    def __init__(self, proc_id, store=DefaultStore()):
+        self.proc_id = proc_id
         self.store = store
 
-    def start(self, fn, infile, outfile, pool_size=1):
+    def start(self, fn, infile, outfile, pool_size=1, setup_fn=None):
         """Start processing a parameter space.
 
         Parameters
@@ -347,10 +351,21 @@ class Worker(object):
             Parameter space input filename.
         outfile : str
             Output filename for the results.
+        pool_size : int, optional
+            Number of parallel processes.
+        setup_fn : function, optional
+            Setup function, called with the worker ID as argument before
+            processing of parameter sets begins. May return a dictionary of
+            parameters added to the invocation of *fn*.
         """
+        add_params = None
+        if setup_fn is not None:
+            add_params = setup_fn(self.proc_id)
+        if add_params is None:
+            add_params = {}
         pspace = Param(**self.store.load(infile))
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
-            fn, pspace, out_root + '.part' + out_ext, store=self.store,
-            return_data=False, pool_size=pool_size)
+            fn, Param(**add_params) * pspace, out_root + '.part' + out_ext,
+            store=self.store, return_data=False, pool_size=pool_size)
         os.rename(out_root + '.part' + out_ext, outfile)

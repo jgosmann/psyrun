@@ -11,8 +11,12 @@ from psyrun.tasks import TaskDef
 from psyrun.utils.testing import MockScheduler, taskenv
 
 
-def square(a):
-    return {'x': a ** 2}
+def setup_fn(proc_id):
+    assert proc_id == 0
+    return {'p': 2}
+
+def square(a, p):
+    return {'x': a ** p}
 
 
 @pytest.mark.parametrize(
@@ -50,8 +54,8 @@ def test_worker(tmpdir):
     infile = str(tmpdir.join('in.npz'))
     outfile = str(tmpdir.join('out.npz'))
     DefaultStore().save(infile, Param(a=range(7)).build())
-    worker = Worker(DefaultStore())
-    worker.start(square, infile, outfile)
+    worker = Worker(0, DefaultStore())
+    worker.start(square, infile, outfile, setup_fn=setup_fn)
     result = DefaultStore().load(outfile)
     assert sorted(result['a']) == sorted(range(7))
     assert sorted(result['x']) == [i ** 2 for i in range(7)]

@@ -5,5 +5,10 @@ pspace = Param(x=range(4))
 overwrite_dirty = False
 
 
-def execute(x):
-    return {'y': x ** 2}
+def setup(proc_id):
+    assert 0 <= proc_id < 4
+    return {'p': 2}
+
+
+def execute(x, p):
+    return {'y': x ** p}

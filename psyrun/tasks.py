@@ -111,6 +111,13 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     scheduler_args : dict, default: ``{}``
         Additional scheduler arguments. See the documentation of the
         scheduler for details.
+    setup : function, default: None
+        Function to call after starting a worker process before any parameter
+        sets are processed. The function gets the ID of the worker process
+        (usually starting at 0 and incremented by one for each process) as sole
+        argument. It may return a dictionary of additional arguments to pass
+        to the processing function. The setup function can be used to
+        initialize process wide resources.
     store : `Store`, default: `PickleStore`
         Input/output backend.
     workdir : str, default: ``'psy-work'``
@@ -122,7 +129,7 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     __slots__ = [
         'backend', 'file_dep', 'max_jobs', 'min_items', 'pool_size', 'pspace',
         'overwrite_dirty', 'python', 'resultfile', 'scheduler',
-        'scheduler_args', 'store', 'workdir']
+        'scheduler_args', 'setup', 'store', 'workdir']
 
     def __init__(self):
         self.backend = DefaultBackend
@@ -136,6 +143,7 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
         self.resultfile = None
         self.scheduler = ImmediateRun()
         self.scheduler_args = dict()
+        self.setup = None
         self.store = DefaultStore()
         self.workdir = os.path.abspath('psy-work')
 
