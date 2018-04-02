@@ -64,12 +64,11 @@ def test_load_config_from_file(tmpdir):
 
 
 @pytest.mark.parametrize('task', ['square', 'square_load_balanced'])
-class TestPsyrun(object):
-    def test_psyrun(self, taskenv, task):
-        psy_main(['run', '--taskdir', taskenv.taskdir, task])
-        result = PickleStore().load(
-            os.path.join(taskenv.workdir, task, 'result.pkl'))
-        assert sorted(result['y']) == [0, 1, 4, 9]
+def test_psyrun(taskenv, task):
+    psy_main(['run', '--taskdir', taskenv.taskdir, task])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, task, 'result.pkl'))
+    assert sorted(result['y']) == [0, 1, 4, 9]
 
 
 def test_psyrun_h5_backend(taskenv):
@@ -84,6 +83,14 @@ def test_psyrun_npz_backend(taskenv):
     result = NpzStore().load(
         os.path.join(taskenv.workdir, 'square_npz', 'result.npz'))
     assert sorted(result['y']) == [0, 1, 4, 9]
+
+
+@pytest.mark.parametrize('task', ['square', 'square_load_balanced'])
+def test_exclude_from_result(taskenv, task):
+    psy_main(['run', '--taskdir', taskenv.taskdir, task])
+    result = PickleStore().load(
+        os.path.join(taskenv.workdir, task, 'result.pkl'))
+    assert 'z' not in result
 
 
 def test_fails_for_existing_old_results_by_default(taskenv):

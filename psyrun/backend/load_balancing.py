@@ -92,15 +92,16 @@ from psyrun.backend.load_balancing import LoadBalancingWorker
 if __name__ == '__main__':
     workers = [
         LoadBalancingWorker(
-            i, sys.argv[1], sys.argv[2], sys.argv[3], task.store)
-        for i in range({pool_size})]
+            i, sys.argv[1], sys.argv[2], sys.argv[3],
+            task.store, task.exclude_from_result)
+        for i in range(task.pool_size)]
     processes = [Process(target=w.start, args=(task.execute, task.setup))
                  for w in workers]
     for p in processes:
         p.start()
     for p in processes:
         p.join()
-            '''.format(pool_size=self.task.pool_size))
+            ''')
 
         return JobArray(
             self.task.max_jobs, 'process', self.submit_array, self.submit_file,
@@ -155,14 +156,20 @@ class LoadBalancingWorker(object):
         Filename of the file to track the processing progress.
     store : `Store`, optional
         Input/output backend.
+    exclude_from_result : sequence, optional
+        Keys of items to exclude from the result.
     """
     def __init__(
-            self, proc_id, infile, outfile, statusfile, store=DefaultStore()):
+            self, proc_id, infile, outfile, statusfile, store=DefaultStore(),
+            exclude_from_result=None):
         self.proc_id = proc_id
         self.infile = infile
         self.outfile = outfile
         self.statusfile = statusfile
         self.store = store
+        if exclude_from_result is None:
+            exclude_from_result = []
+        self.exclude_from_result = exclude_from_result
 
     @classmethod
     def create_statusfile(cls, statusfile):
@@ -232,5 +239,7 @@ class LoadBalancingWorker(object):
                 pspace = Param(**self.get_next_param_set())
             except IndexError:
                 return
-            data = map_pspace(fn, Param(**add_params) * pspace)
+            data = map_pspace(
+                fn, Param(**add_params) * pspace,
+                exclude=self.exclude_from_result)
             self.save_data(data)

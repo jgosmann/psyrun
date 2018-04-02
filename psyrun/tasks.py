@@ -82,6 +82,9 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     backend : `Backend`, default: `DistributeBackend`
         The processing backend which determines how work is distributed across
         jobs.
+    exclude_from_result : sequence of str, default: ``[]``
+        Keys of items to exclude from result. This can be useful if parameters
+        or parts of the result cannot be saved to disk.
     file_dep : sequence of str, default: ``[]``
         Additional files the task depends on.
     max_jobs : int, default: 100
@@ -127,12 +130,14 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
     """
 
     __slots__ = [
-        'backend', 'file_dep', 'max_jobs', 'min_items', 'pool_size', 'pspace',
-        'overwrite_dirty', 'python', 'resultfile', 'scheduler',
-        'scheduler_args', 'setup', 'store', 'workdir']
+        'backend', 'exclude_from_result', 'file_dep', 'max_jobs',
+        'min_items', 'pool_size', 'pspace', 'overwrite_dirty', 'python',
+        'resultfile', 'scheduler', 'scheduler_args', 'setup', 'store',
+        'workdir']
 
     def __init__(self):
         self.backend = DefaultBackend
+        self.exclude_from_result = []
         self.file_dep = []
         self.max_jobs = 100
         self.min_items = 1

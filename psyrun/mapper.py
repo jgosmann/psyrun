@@ -2,7 +2,9 @@
 
 from multiprocessing import Pool
 import os.path
+import warnings
 
+from psyrun.exceptions import IneffectiveExcludeWarning
 from psyrun.pspace import dict_concat, missing, Param
 
 
@@ -37,9 +39,14 @@ def get_result(fn, params, exclude=None):
     """
     result = dict(params)
     result.update(fn(**params))
+
     if exclude is not None:
         for k in exclude:
-            del result[k]
+            if k in result:
+                del result[k]
+            else:
+                warnings.warn(IneffectiveExcludeWarning(k))
+
     return result
 
 

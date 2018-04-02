@@ -110,9 +110,11 @@ def execute(*args, **kwargs):
     return task.execute(*args, **kwargs)
 
 if __name__ == '__main__':
-    Worker(int(sys.argv[3]), store=task.store).start(
-        execute, sys.argv[1], sys.argv[2], pool_size={pool_size},
-        setup_fn=task.setup)
+    Worker(
+        int(sys.argv[3]), store=task.store,
+        exclude_from_result=task.exclude_from_result).start(
+            execute, sys.argv[1], sys.argv[2], pool_size={pool_size},
+            setup_fn=task.setup)
             '''.format(pool_size=self.task.pool_size))
 
         infile = os.path.join(splitter.indir, '%a' + splitter.store.ext)
@@ -329,16 +331,26 @@ class Worker(object):
         Worker ID.
     store : `Store`, optional
         Input/output backend.
+    exclude_from_result : sequence, optional
+        Keys of items to exclude from the result.
 
     Attributes
     ----------
+    proc_id : int
+        Worker ID.
     store : `Store`
         Input/output backend.
+    exclude_from_result : sequence, optional
+        Keys of items to exclude from the result.
     """
 
-    def __init__(self, proc_id, store=DefaultStore()):
+    def __init__(
+            self, proc_id, store=DefaultStore(), exclude_from_result=None):
         self.proc_id = proc_id
         self.store = store
+        if exclude_from_result is None:
+            exclude_from_result = []
+        self.exclude_from_result = exclude_from_result
 
     def start(self, fn, infile, outfile, pool_size=1, setup_fn=None):
         """Start processing a parameter space.
@@ -367,5 +379,6 @@ class Worker(object):
         out_root, out_ext = os.path.splitext(outfile)
         map_pspace_hdd_backed(
             fn, Param(**add_params) * pspace, out_root + '.part' + out_ext,
-            store=self.store, return_data=False, pool_size=pool_size)
+            store=self.store, return_data=False, pool_size=pool_size,
+            exclude=self.exclude_from_result)
         os.rename(out_root + '.part' + out_ext, outfile)

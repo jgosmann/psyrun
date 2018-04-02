@@ -5,6 +5,7 @@ from psyrun.backend import LoadBalancingBackend
 pspace = Param(x=range(4))
 max_jobs = 2
 backend = LoadBalancingBackend
+exclude_from_result = ['z']
 
 
 def setup(proc_id):
@@ -13,4 +14,4 @@ def setup(proc_id):
 
 
 def execute(x, p):
-    return {'y': x ** p}
+    return {'y': x ** p, 'z': -1}

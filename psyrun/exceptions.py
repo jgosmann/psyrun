@@ -29,4 +29,15 @@ class TaskWorkdirDirtyWarning(TaskWarning):
             "Work directory of task '{}' is dirty.".format(name))
 
 
+class IneffectiveExcludeWarning(UserWarning):
+    """Warning issued when a key in *exclude_from_result* was not found in the
+    result.
+    """
+    def __init__(self, key):
+        super(IneffectiveExcludeWarning, self).__init__(
+            "The key '{}' to remove from the result was not found in the "
+            "result dictionary.".format(key))
+        self.key = key
+
+
 warnings.simplefilter('always', category=TaskWarning)

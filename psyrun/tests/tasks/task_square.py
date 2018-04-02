@@ -3,6 +3,7 @@ from psyrun import Param
 
 pspace = Param(x=range(4))
 overwrite_dirty = False
+exclude_from_result = ['z']
 
 
 def setup(proc_id):
@@ -11,4 +12,4 @@ def setup(proc_id):
 
 
 def execute(x, p):
-    return {'y': x ** p}
+    return {'y': x ** p, 'z': -1}

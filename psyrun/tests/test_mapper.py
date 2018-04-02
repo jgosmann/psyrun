@@ -2,6 +2,7 @@ import os.path
 
 import pytest
 
+from psyrun.exceptions import IneffectiveExcludeWarning
 from psyrun.store.h5 import H5Store
 from psyrun.store.npz import NpzStore
 from psyrun.store.pickle import PickleStore
@@ -71,3 +72,9 @@ def test_exclude(tmpdir, mapper):
         kwargs['filename'] = os.path.join(str(tmpdir), 'out.pkl')
     result = mapper(square, pspace, exclude=['a'], **kwargs)
     assert 'a' not in result
+
+
+def test_exclude_warning_if_not_in_result():
+    pspace = Param(a=[1, 2])
+    with pytest.warns(IneffectiveExcludeWarning):
+        result = map_pspace(square, pspace, exclude=['b'])
