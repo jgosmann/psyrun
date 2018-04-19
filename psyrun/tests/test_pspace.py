@@ -55,8 +55,8 @@ class TestParam(object):
 
     def test_keeps_dtype(self):
         space = Param(a=[1], b=[2.]).build()
-        assert np.issubdtype(type(space['a'][0]), int)
-        assert np.issubdtype(type(space['b'][0]), float)
+        assert np.issubdtype(type(space['a'][0]), np.signedinteger)
+        assert np.issubdtype(type(space['b'][0]), np.floating)
 
     def test_from_dict(self):
         d = {'a': [1, 2], 'b.x': 3, 'b.y': [4, 5]}

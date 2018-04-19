@@ -24,9 +24,9 @@ def match_shape(a, shape):
 
     dtype = a.dtype
     matched = np.empty((a.shape[0],) + shape, dtype=dtype)
-    if np.issubdtype(dtype, float) or np.issubdtype(dtype, complex):
+    if np.issubdtype(dtype, np.inexact):
         matched.fill(np.nan)
-    elif np.issubdtype(dtype, int):
+    elif np.issubdtype(dtype, np.number):
         matched = np.asfarray(matched)
         matched.fill(np.nan)
     elif dtype.kind in 'SU':
