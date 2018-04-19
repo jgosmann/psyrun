@@ -5,6 +5,12 @@ Changes
 0.7.1 (unreleased)
 ------------------
 
+Documentation improvements
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Added documentation for the ``pool_size`` task attribute and included it in
+  the task template.
+
 Bug fixes
 ^^^^^^^^^
 
