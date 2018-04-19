@@ -59,3 +59,15 @@ def test_map_pspace_parallel():
     pspace = Param(a=[1, 2])
     result = map_pspace_parallel(square, pspace)
     assert result == {'a': [1, 2], 'x': [1, 4]}
+
+
+@pytest.mark.parametrize(
+    'mapper', [map_pspace, map_pspace_parallel, map_pspace_hdd_backed])
+def test_exclude(tmpdir, mapper):
+    pspace = Param(a=[1, 2])
+    kwargs = {}
+    if mapper is map_pspace_hdd_backed:
+        kwargs['store'] = PickleStore()
+        kwargs['filename'] = os.path.join(str(tmpdir), 'out.pkl')
+    result = mapper(square, pspace, exclude=['a'], **kwargs)
+    assert 'a' not in result

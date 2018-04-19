@@ -6,7 +6,7 @@ import os.path
 from psyrun.pspace import dict_concat, missing, Param
 
 
-def get_result(fn, params):
+def get_result(fn, params, exclude=None):
     """Evaluates a function with given parameters.
 
     Evaluates *fn* with the parameters *param* and returns a dictionary with
@@ -18,6 +18,8 @@ def get_result(fn, params):
         Function to evaluate. Has to return a dictionary.
     params : dict
         Parameters passed to *fn* as keyword arguments.
+    exclude : sequence, optional
+        Keys of elements to exclude from the results dictionary.
 
     Returns
     -------
@@ -35,6 +37,9 @@ def get_result(fn, params):
     """
     result = dict(params)
     result.update(fn(**params))
+    if exclude is not None:
+        for k in exclude:
+            del result[k]
     return result
 
 
@@ -42,7 +47,7 @@ def _get_result_single_arg(args):
     return get_result(*args)
 
 
-def map_pspace(fn, pspace):
+def map_pspace(fn, pspace, exclude=None):
     """Maps a function to parameter space values.
 
     Parameters
@@ -51,6 +56,8 @@ def map_pspace(fn, pspace):
         Function to evaluate on parameter space. Has to return a dictionary.
     pspace : `ParameterSpace`
         Parameter space providing parameter values to evaluate function on.
+    exclude : sequence, optional
+        Keys of elements to exclude from the results dictionary.
 
     Returns
     -------
@@ -68,11 +75,13 @@ def map_pspace(fn, pspace):
     >>> pprint(map_pspace(fn, Param(x=[1, 2])))
     {'x': [1, 2], 'y': [1, 4]}
     """
-    return dict_concat(list(get_result(fn, p) for p in pspace.iterate()))
+    return dict_concat(list(get_result(
+        fn, p, exclude) for p in pspace.iterate()))
 
 
 def map_pspace_hdd_backed(
-        fn, pspace, filename, store, return_data=True, pool_size=1):
+        fn, pspace, filename, store, return_data=True, pool_size=1,
+        exclude=None):
     """Maps a function to parameter space values while storing produced data.
 
     Data is stored progressively. Thus, if the program crashes, not all data
@@ -91,6 +100,8 @@ def map_pspace_hdd_backed(
     return_data : bool, optional
         Whether to return the resulting data after mapping the function. This
         will read all produced data from the disk.
+    exclude : sequence, optional
+        Keys of elements to exclude from the results dictionary.
 
     Returns
     -------
@@ -103,7 +114,7 @@ def map_pspace_hdd_backed(
     chunksize = max(1, len(pspace) // pool_size)
     for r in Pool(pool_size).imap_unordered(
             _get_result_single_arg,
-            ((fn, p) for p in pspace.iterate()), chunksize):
+            ((fn, p, exclude) for p in pspace.iterate()), chunksize):
         store.append(filename, dict_concat((r,)))
     if not os.path.exists(filename):
         store.save(filename, {})
@@ -111,7 +122,8 @@ def map_pspace_hdd_backed(
         return store.load(filename)
 
 
-def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
+def map_pspace_parallel(
+        fn, pspace, n_jobs=-1, backend='multiprocessing', exclude=None):
     """Maps a function to parameter space values in parallel.
 
     Requires `joblib <https://pythonhosted.org/joblib/>`_.
@@ -128,6 +140,8 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
         Backend to use. See `joblib documentation
         <https://pythonhosted.org/joblib/parallel.html#using-the-threading-backend>`_
         for details.
+    exclude : sequence, optional
+        Keys of elements to exclude from the results dictionary.
 
     Returns
     -------
@@ -147,4 +161,4 @@ def map_pspace_parallel(fn, pspace, n_jobs=-1, backend='multiprocessing'):
     import joblib
     parallel = joblib.Parallel(n_jobs=n_jobs, backend=backend)
     return dict_concat(parallel(
-        joblib.delayed(get_result)(fn, p) for p in pspace.iterate()))
+        joblib.delayed(get_result)(fn, p, exclude) for p in pspace.iterate()))
