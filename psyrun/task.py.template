@@ -13,6 +13,7 @@ overwrite_dirty = True  # Overwrite dirty workdirs without warning
 
 max_jobs = 100  # Maximum number of processing jobs
 min_items = 1  # Minimum number of items to assign to each processing job
+pool_size = 1  # Parallel processing threads per job.
 
 backend = DistributeBackend  # Backend for job execution
 scheduler = {scheduler}  # Scheduler to submit individual jobs
