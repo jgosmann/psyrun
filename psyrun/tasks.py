@@ -95,6 +95,10 @@ class Config(object):  # pylint: disable=too-many-instance-attributes
         assignment which can save some overhead.
     overwrite_dirty : bool, default: True
         Whether to overwrite dirty workdirs without a warning.
+    pool_size : int, default: 1
+        Number of parallel threads or processes each job will run. This allows
+        for parallelization without a proper scheduler (e.g. when using
+        `psyrun.scheduler.ImmediateRun`).
     pspace : `ParameterSpace`, required
         Parameter space to evaluate.
     python : str, default: ``sys.executable``
