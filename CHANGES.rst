@@ -2,6 +2,16 @@ Changes
 =======
 
 
+0.7.1 (unreleased)
+------------------
+
+Bug fixes
+^^^^^^^^^
+
+* Allow to continue tasks if results are missing even if the result file is
+  newer than the task file.
+
+
 0.7.0 (February 18, 2018)
 -------------------------
 

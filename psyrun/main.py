@@ -160,7 +160,11 @@ class RunCmd(TaskselCmd):
         names = Fullname(job).names
         uptodate = Uptodate(job, names, task)
 
-        if not cont:
+        if cont:
+            if len(backend.get_missing()) > 0:
+                for k in uptodate.status:
+                    uptodate.status[k] = False
+        else:
             if uptodate.outdated and os.path.exists(backend.resultfile):
                 if not task.overwrite_dirty:
                     warnings.warn(TaskWorkdirDirtyWarning(task.name))
