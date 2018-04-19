@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'psyrun'
-copyright = u'2015–2017, Jan Gosmann'
+copyright = u'2015–2018, Jan Gosmann'
 author = u'Jan Gosmann'
 
 # The version info for the project you're documenting, acts as replacement for
