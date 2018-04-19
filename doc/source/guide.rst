@@ -462,3 +462,37 @@ scalars as Pandas does not support multi-dimensional data.
 
     store = psyrun.store.PickleStore()  # insert appropriate store here
     df = pd.DataFrame(store.load('path/to/datafile.pkl'))
+
+
+Utilize multiple GPUs with load balancing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following shows a task file that runs multiple instances of PyOpenCL code
+in a load balancing fashion on multiple GPUs.
+
+.. code-block:: python
+
+   from psyrun.backend import LoadBalancingBackend
+   import pyopencl
+
+   # Define you parameter space
+   # pspace = ?
+
+   backend = LoadBalancingBackend
+   pool_size = 4  # Adjust to the number of GPUs you have
+   max_jobs = 1  # Single job that will start multiple parallel processes.
+
+   exclude_from_result = ['cl_context']  # The context cannot be saved to disk.
+
+   def setup(proc_id):
+       # You might need to adjust the 0 on your system to whatever index
+       # your GPU device group has.
+       return {
+           'cl_context': pyopencl.create_some_context(answers=[0, proc_id]),
+       }
+
+
+   def execute(cl_context, **kwargs):
+       result = {}
+       # Do your GPU calculations using cl_context here
+       return result
