@@ -8,25 +8,27 @@ class TaskWarning(UserWarning):
 
     *TaskWarnings* will always be shown by default.
     """
-    pass
+    def __init__(self, task_name, *args, **kwargs):
+        super(TaskWarning, self).__init__(*args, **kwargs)
+        self.task_name = task_name
 
 
 class JobsRunningWarning(TaskWarning):
     """Warning issued when jobs for a task are still running."""
-    def __init__(self, name):
-        self.task = name
+    def __init__(self, task_name):
         super(JobsRunningWarning, self).__init__(
+            task_name,
             "Task '{}' has unfinished jobs queued. Not starting new jobs "
-            "until these are finished or have been killed.".format(name))
+            "until these are finished or have been killed.".format(task_name))
 
 
 class TaskWorkdirDirtyWarning(TaskWarning):
     """Warning issued when the workdir is dirty and would be overwritten."""
-    def __init__(self, name):
+    def __init__(self, task_name):
         # TODO explain how to solve this
-        self.task = name
         super(TaskWorkdirDirtyWarning, self).__init__(
-            "Work directory of task '{}' is dirty.".format(name))
+            task_name,
+            "Work directory of task '{}' is dirty.".format(task_name))
 
 
 class IneffectiveExcludeWarning(UserWarning):
