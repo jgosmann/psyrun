@@ -464,6 +464,30 @@ scalars as Pandas does not support multi-dimensional data.
     df = pd.DataFrame(store.load('path/to/datafile.pkl'))
 
 
+Random search
+^^^^^^^^^^^^^
+
+`Random search can be more efficient than a grid search.
+<http://jmlr.csail.mit.edu/papers/volume13/bergstra12a/bergstra12a.pdf>`_
+A random search can be easily done with Psyrun by sampling the parameter values
+from random distributions. It is best to use a seed, so that results are
+reproducible. Change the seed to obtain another set of evaluations for different
+parameters.
+
+.. code-block:: python
+
+    import numpy as np
+    from psyrun import Param
+
+    seed = 42
+    rng = np.random.RandomState(seed)
+    n_evaluations = 100
+
+    pspace = Param(
+        p1=rng.uniform(-1., 1., n_evaluations),
+        p2=rng.normal(0., 1., n_evaluations))
+
+
 Utilize multiple GPUs with load balancing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
